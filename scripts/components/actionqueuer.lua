@@ -17,6 +17,10 @@ for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1
     offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
 end
 
+local function isDST()
+  return _isDST
+end
+
 local DebugPrint = TUNING.ACTION_QUEUE_DEBUG_MODE and function(...)
     local msg = "[ActionQueue]"
     for i = 1, arg.n do
@@ -171,7 +175,12 @@ local function GetDeploySpacing(item)
     for key, spacing in pairs(deploy_spacing) do
         if item.prefab:find(key) or item:HasTag(key) then return spacing end
     end
-    local spacing = item.replica.inventoryitem:DeploySpacingRadius()
+    local spacing
+    if isDST() then
+      spacing = item.replica.inventoryitem:DeploySpacingRadius()
+    else
+      spacing = item.components.deployable.min_spacing
+    end
     return spacing ~= 0 and spacing or 1
 end
 
@@ -183,16 +192,25 @@ local function GetDropSpacing(item)
 end
 
 local function CompareDeploySpacing(item, spacing)
-    return item and item.replica.inventoryitem and item.replica.inventoryitem.classified
+    if item == nil then return end
+    local comps
+    if isDST() then
+      return item and (item.replica.inventoryitem) and item.replica.inventoryitem.classified
        and item.replica.inventoryitem.classified.deployspacing:value() == spacing
+    else
+      return item and (item.components.deployable) and item.components.deployable.min_spacing:value() == spacing
+    end
 end
 
+
 local function GetHeadingDir()
-    local dir = headings[TheCamera.heading]
-    if dir ~= nil then return TheCamera.heading, dir end
+    local camHeading = (TheCamera.heading) % 360
+    local dir = headings[camHeading]
+    if dir ~= nil then return camHeading, dir end
     for heading, dir in pairs(headings) do --diagonal priority
         local check_angle = heading % 2 ~= 0 and 23 or 22.5
-        if math.abs(TheCamera.heading - heading) < check_angle then
+        if math.abs(camHeading - heading) < check_angle then
+            DebugPrint("Heading: ", heading, "; Direction: ", dir)
             return heading, dir
         end
     end
@@ -222,14 +240,22 @@ function ActionQueuer:Wait(action, target)
     local current_time = GetTime()
     if action and CheckAllowedActions("noworkdelay", action, target) then
         repeat
+            DebugPrint("Sleeping under noworkdelay...")
             Sleep(self.action_delay)
         until not (self.inst.sg and self.inst.sg:HasStateTag("moving")) and not self.inst:HasTag("moving")
     else
         Sleep(self.work_delay)
         repeat
+            -- DebugPrint("Sleeping under workdelay")
             Sleep(self.action_delay)
-        until not (self.inst.sg and self.inst.sg:HasStateTag("moving")) and not self.inst:HasTag("moving")
-              and self.inst:HasTag("idle") and not self.inst.components.playercontroller:IsDoingOrWorking()
+        until not (
+          self.inst.sg
+          and self.inst.sg:HasStateTag("moving")
+        ) and not self.inst:HasTag("moving")
+        and (
+          isDST() and self.inst:HasTag("idle")
+          or self.inst.sg:HasStateTag("idle")
+        ) and not self.inst.components.playercontroller:IsDoingOrWorking()
     end
     DebugPrint("Time waited:", GetTime() - current_time)
 end
@@ -238,7 +264,13 @@ function ActionQueuer:GetAction(target, rightclick, pos)
     local pos = pos or target:GetPosition()
     local playeractionpicker = self.inst.components.playeractionpicker
     if rightclick then
-        for _, act in ipairs(playeractionpicker:GetRightClickActions(pos, target)) do
+        local rcactions
+        if isDST() then
+          rcactions = playeractionpicker:GetRightClickActions(pos, target)
+        else
+          rcactions = playeractionpicker:GetRightClickActions(target, pos)
+        end
+        for _, act in ipairs(rcactions) do
             if CheckAllowedActions("rightclick", act.action, target) then
                 DebugPrint("Allowed rightclick action:", act)
                 return act, true
@@ -259,11 +291,14 @@ end
 function ActionQueuer:SendAction(act, rightclick, target)
     DebugPrint("Sending action:", act)
     local playercontroller = self.inst.components.playercontroller
-    if playercontroller.ismastersim then
+    if playercontroller.ismastersim or not isDST() then
+        DebugPrint("Doing action directly")
         self.inst.components.combat:SetTarget(nil)
         playercontroller:DoAction(act)
         return
     end
+    DebugPrint("If you're seeing this in DSA, something went wrong!")
+    -- The remainder should never get executed on DSA
     local pos = act:GetActionPoint() or self.inst:GetPosition()
     local controlmods = 10 --force stack and force attack
     if playercontroller.locomotor then
@@ -383,8 +418,10 @@ function ActionQueuer:CherryPick(rightclick)
 end
 
 function ActionQueuer:OnDown(rightclick)
+    DebugPrint("AQ-OnDown: ", rightclick)
     self:ClearSelectionThread()
     if self.inst:IsValid() and not IsHUDEntity() then
+        DebugPrint("Setting clicked = true")
         self.clicked = true
         self:SelectionBox(rightclick)
         self:CherryPick(rightclick)
@@ -392,11 +429,13 @@ function ActionQueuer:OnDown(rightclick)
 end
 
 function ActionQueuer:OnUp(rightclick)
+    DebugPrint("AQ:OnUp - rightclick: ", rightclick)
     self:ClearSelectionThread()
     if self.clicked then
         self.clicked = false
         if self.action_thread then return end
         if self:IsWalkButtonDown() then
+            DebugPrint("AQ:OnUp - clearing entities")
             self:ClearSelectedEntities()
         elseif next(self.selected_ents) then
             self:ApplyToSelection()
@@ -412,7 +451,9 @@ function ActionQueuer:OnUp(rightclick)
                         return
                     end
                 end
-                if active_item.replica.inventoryitem:IsDeployable(self.inst) then
+                local _isdeployable = (isDST() and active_item.replica.inventoryitem:IsDeployable(self.inst)) or active_item.components.inventoryitem:IsDeployable(self.inst)
+                if _isdeployable then
+                    DebugPrint("AQ:OnUp - issuing DeployToSelection with DeployActiveItem")
                     self:DeployToSelection(self.DeployActiveItem, GetDeploySpacing(active_item), active_item)
                 else
                     self:DeployToSelection(self.DropActiveItem, GetDropSpacing(active_item), active_item)
@@ -428,7 +469,7 @@ function ActionQueuer:OnUp(rightclick)
             local recipe = playercontroller.placer_recipe
             local rotation = playercontroller.placer:GetRotation()
             local skin = playercontroller.placer_recipe_skin
-            local builder = self.inst.replica.builder
+            local builder = isDST() and self.inst.replica.builder or self.inst.components.builder
             local spacing = recipe.min_spacing > 2 and 4 or 2
             self:DeployToSelection(function(self, pos, item)
                 if not builder:IsBuildBuffered(recipe.name) then
@@ -446,49 +487,91 @@ function ActionQueuer:OnUp(rightclick)
 end
 
 function ActionQueuer:IsWalkButtonDown()
-    return self.inst.components.playercontroller:IsAnyOfControlsPressed(CONTROL_MOVE_UP, CONTROL_MOVE_DOWN, CONTROL_MOVE_LEFT, CONTROL_MOVE_RIGHT)
+    if isDST() then
+      -- Not sure why extending playercontroller in DSA with the DST's implementation doesn't work as expected.
+      return self.inst.components.playercontroller:IsAnyOfControlsPressed(CONTROL_MOVE_UP, CONTROL_MOVE_DOWN, CONTROL_MOVE_LEFT, CONTROL_MOVE_RIGHT)
+    else
+      -- ...byt hey, there's already a function for this.
+      return self.inst.components.playercontroller:WalkButtonDown()
+    end
 end
 
 function ActionQueuer:GetActiveItem()
-    return self.inst.replica.inventory:GetActiveItem()
+    if isDST() then
+      return self.inst.replica.inventory:GetActiveItem()
+    else
+      return self.inst.components.inventory:GetActiveItem()
+    end
 end
 
 function ActionQueuer:GetEquippedItemInHand()
-    return self.inst.replica.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
+    if isDST() then
+      return self.inst.replica.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
+    else
+      return self.inst.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
+    end
 end
 
 function ActionQueuer:GetNewItem(prefab, fn_name, use_item)
-    local inventory = self.inst.replica.inventory
+    DebugPrint("GetNewItem, prefab: ", prefab, ", fn_name: ", fn_name, ", use_item: ", use_item)
+    local inventory = isDST() and self.inst.replica.inventory or self.inst.components.inventory
     local body_item = inventory:GetEquippedItem(EQUIPSLOTS.BODY)
-    local backpack = body_item and body_item.replica.container
+    local backpack
+    if _isDST then
+      backpack = body_item and (body_item.replica.container or body_item.components.container)
+    else
+      backpack = body_item and body_item.components.container
+    end
     for _, inventory in pairs(backpack and {inventory, backpack} or {inventory}) do
-        for slot, item in pairs(inventory:GetItems()) do
+        DebugPrint("Checking inventory: ", inventory.inst)
+        local items
+        if (not isDST() and inventory.type == nil) then
+          DebugPrint("Getting items from main inventory")
+          items = inventory.itemslots
+        else
+          items = inventory:GetItems()
+        end
+        for slot, item in pairs(items) do
+            DebugPrint("Checking item: ", item)
             if item and item.prefab == prefab then
+                DebugPrint("Item found in inventory: ", inventory.inst)
                 inventory[fn_name](inventory, use_item and item or slot)
                 return item
             end
         end
     end
+    -- else
+    --
+    -- end
+
 end
 
 function ActionQueuer:GetNewActiveItem(prefab)
+    DebugPrint("Entered AQ:GetNewActiveItem with prefab: ", prefab)
     return self:GetNewItem(prefab, "TakeActiveItemFromAllOfSlot")
+    -- This is a DST-specific function that takes an item from a slot in an inventory, and makes it "active", ie held by player's pointer
 end
 
 function ActionQueuer:GetNewEquippedItemInHand(prefab)
+    DebugPrint("Entered AQ:GetNewEquippedItemInHand with prefab: ", prefab)
     return self:GetNewItem(prefab, "UseItemFromInvTile", true)
 end
 
 function ActionQueuer:DeployActiveItem(pos, item)
+    DebugPrint("AQ:DeployActiveItem - Trying to deploy ", item, " at ", pos)
     local active_item = self:GetActiveItem() or self:GetNewActiveItem(item.prefab)
-    if not active_item then return false end
-    local inventoryitem = active_item.replica.inventoryitem
+    if not active_item then
+      DebugPrint("AQ:DeployActiveItem - couldn't find (more) items to dpeloy - ", item.prefab)
+      return false
+    end
+    local inventoryitem = isDST() and active_item.replica.inventoryitem or active_item.components.deployable
     if inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) then
         local act = BufferedAction(self.inst, nil, ACTIONS.DEPLOY, active_item, pos)
         local playercontroller = self.inst.components.playercontroller
         if playercontroller.deployplacer then
             act.rotation = playercontroller.deployplacer.Transform:GetRotation()
         end
+        DebugPrint("AQ:DeployActiveItem - SendActionAndWait, pos: ", pos)
         self:SendActionAndWait(act, true)
         if not playercontroller.ismastersim and not CompareDeploySpacing(active_item, DEPLOYSPACING.NONE) then
             while inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) do
@@ -496,6 +579,7 @@ function ActionQueuer:DeployActiveItem(pos, item)
             end
         end
     end
+    DebugPrint("AQ:DeployActiveItem - complete, returning true on pos ", pos)
     return true
 end
 
@@ -624,6 +708,7 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
     local diagonal = heading % 2 ~= 0
     DebugPrint("Heading:", heading, "Diagonal:", diagonal, "Spacing:", spacing)
     DebugPrint("TL:", self.TL, "TR:", self.TR, "BL:", self.BL, "BR:", self.BR)
+    DebugPrint("DeployToSelection - deploy_fn: ", deploy_fn)
     local X, Z = "x", "z"
     if dir then X, Z = Z, X end
     local spacing_x = self.TL[X] > self.TR[X] and -spacing or spacing
@@ -648,7 +733,9 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
     local row_swap = 1
     self.action_thread = StartThread(function()
         self.inst:ClearBufferedAction()
+        DebugPrint("Action_thread - start")
         while self.inst:IsValid() do
+            DebugPrint("Action_thread - while loop")
             cur_pos.x = start_x + spacing_x * count.x
             cur_pos.z = start_z + spacing_z * count.z
             if diagonal then
@@ -682,14 +769,18 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
                 count[X] = count[X] + row_swap
             end
             local accessible_pos = cur_pos
+            -- DebugPrint("accessible_pos: ", accessible_pos)
             if terraforming then
                 accessible_pos = GetAccessibleTilePosition(cur_pos)
             end
             DebugPrint("Current Position:", accessible_pos or "skipped")
             if accessible_pos then
-                if not deploy_fn(self, accessible_pos, item) then break end
+                DebugPrint("Running deploy_fn")
+                if not deploy_fn(self, accessible_pos, item) then DebugPrint("deploy_fn returned false") break end
             end
+            DebugPrint("DeployToSelection - am I still valid?", self.inst:IsValid())
         end
+        DebugPrint("Action Thread - while loop terminated")
         self:ClearActionThread()
         self.inst:DoTaskInTime(0, function() if next(self.selected_ents) then self:ApplyToSelection() end end)
     end, action_thread_id)
@@ -699,7 +790,11 @@ function ActionQueuer:RepeatRecipe(builder, recipe, skin)
     self.action_thread = StartThread(function()
         self.inst:ClearBufferedAction()
         while self.inst:IsValid() and builder:CanBuild(recipe.name) do
-            builder:MakeRecipeFromMenu(recipe, skin)
+            if isDST() then
+              builder:MakeRecipeFromMenu(recipe, skin)
+            else
+              builder:MakeRecipe(recipe)
+            end
             Sleep(self.action_delay)
         end
         self:ClearActionThread()
@@ -765,10 +860,20 @@ function ActionQueuer:SelectEntity(ent, rightclick)
 end
 
 function ActionQueuer:DeselectEntity(ent)
+    DebugPrint("Deselecting Entity: ", ent)
     if self:IsSelectedEntity(ent) then
+        DebugPrint("Deselect - removing from internal list:")
+        DebugPrint(self.selected_ents)
         self.selected_ents[ent] = nil
         if ent:IsValid() and ent.components.highlight then
-            ent.components.highlight:UnHighlight()
+            DebugPrint("Deselect - removing highlight:")
+            DebugPrint(ent.components.highlight)
+            if isDST then
+              ent.components.highlight:UnHighlight()
+            else
+              -- TODO: custom unhighlight, see Finder Fix
+            end
+            DebugPrint(ent.components.highlight)
         end
     end
 end
@@ -782,7 +887,9 @@ function ActionQueuer:ToggleEntitySelection(ent, rightclick)
 end
 
 function ActionQueuer:ClearSelectedEntities()
+    DebugPrint("ClearSelectedEntities called")
     for ent in pairs(self.selected_ents) do
+        DebugPrint("CSE: Deselecting ", ent)
         self:DeselectEntity(ent)
     end
 end
@@ -809,6 +916,7 @@ function ActionQueuer:ClearActionThread()
 end
 
 function ActionQueuer:ClearAllThreads()
+    DebugPrint("ClearAllThreads entered")
     self:ClearActionThread()
     self:ClearSelectionThread()
     self:ClearSelectedEntities()

@@ -1,8 +1,20 @@
+--[[
+TODO:
+- highlight is broken, pt.1 - high;ight is left on things that are picked up
+- highlight is broken, pt.2 - deselected items don't apparrently drop highlight until mouse-over
+- highlight is broken, pt.3 - it seems highlight can stack
+- hacking not added to allowed functions
+UNTESTED:
+- fishing
+- terraforming
+- giving
+- oh yeah.. check if this still works in DST
+]]
 
 name = "ActionQueue Reborn"
 description = ""
 author = "eXiGe / simplex(Original Author)"
-version = "1.046"
+version = "1.046+myxal_1"
 api_version_dst = 10
 
 icon_atlas = "modicon.xml"
@@ -11,6 +23,13 @@ icon = "modicon.tex"
 dst_compatible = true
 all_clients_require_mod = false
 client_only_mod = true
+
+api_version = 6
+dont_starve_compatible = true
+reign_of_giants_compatible = true
+shipwrecked_compatible = true
+hamlet_compatible = true
+forumthread = ''
 
 folder_name = folder_name or "action queue"
 if not folder_name:find("workshop-") then
