@@ -208,7 +208,7 @@ AddComponentPostInit("playercontroller", function(self, inst)
             end
         end
         PlayerControllerOnControl(self, control, down)
-        DebugPrint("PCOnControl; control: ", control, ", down: ", down, ", inGame: ", InGame())
+        DebugPrint("PCOnControl; control: ", control, ", down: ", down, ", inGame: ", InGame(), ", ActionThread: ", ActionQueuer.action_thread ~= nil, ", SelectionThread: ", ActionQueuer.selection_thread ~= nil)
         local screen = _G.TheFrontEnd:GetActiveScreen()
         if down and ActionQueuer.action_thread and not ActionQueuer.selection_thread and InGame()
           and (interrupt_controls[control] or mouse_control ~= nil and not TheInput:GetHUDEntityUnderMouse()) then
@@ -271,9 +271,9 @@ AddComponentPostInit("highlight", function(self, inst)
     end
     local HighlightUnHighlight = self.UnHighlight
     self.UnHighlight = function(self)
-        DebugPrint("Entered UnHighlight() with item: ", inst)
+        -- DebugPrint("Entered UnHighlight() with item: ", inst)
         if ActionQueuer:IsSelectedEntity(inst) then return end
-        DebugPrint("Calling game's UnHighlight for item: ", inst)
+        -- DebugPrint("Calling game's UnHighlight for item: ", inst)
         if isDST() then
           HighlightUnHighlight(self)
         else

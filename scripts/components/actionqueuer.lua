@@ -9,6 +9,13 @@ local unselectable_tags = {"DECOR", "FX", "INLIMBO", "NOCLICK", "player"}
 local selection_thread_id = "actionqueue_selection_thread"
 local action_thread_id = "actionqueue_action_thread"
 local allowed_actions = {}
+local _isDST = (_G.TheSim:GetGameID() == 'DST')
+local TheWorld
+if _isDST then
+  TheWorld = _G.TheWorld
+else
+  TheWorld = GetWorld()
+end
 for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "noworkdelay", "tools", "autocollect", "collect"}) do
     allowed_actions[category] = {}
 end
@@ -72,13 +79,15 @@ local function IsSingleGiveAction(target)
 end
 
 --[[allclick]]
-AddActionList("allclick", "CHOP", "MINE", "NET")
+AddActionList("allclick", "CHOP", "MINE", "NET", "HACK", "SHEAR")
 AddAction("allclick", "ATTACK", function(target)
     return target:HasTag("wall")
 end)
 --[[leftclick]]
-AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK", "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT",
-"FERTILIZE", "FILL", "GIVE", "HAUNT", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL", "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
+AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
+  "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL",
+  "GIVE", "HAUNT", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL", "REPAIR_LEAK",
+  "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
 AddAction("leftclick", "ACTIVATE", function(target)
     return target.prefab == "dirtpile"
 end)
@@ -103,8 +112,9 @@ AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
 AddActionList("single", "CASTSPELL", "DECORATEVASE", "SHAVE")
 AddAction("single", "GIVE", IsSingleGiveAction)
 --[[noworkdelay]]
-AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP", "COOK", "DIG", "DRY", "EAT",
-"FERTILIZE", "FILL", "HAMMER", "HARVEST", "HEAL", "MINE", "PLANT", "REPAIR", "TERRAFORM", "UPGRADE")
+AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP", "COOK",
+  "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER", "HARVEST", "HEAL",
+  "MINE", "PLANT", "REPAIR", "SHEAR", "TERRAFORM", "UPGRADE")
 AddAction("noworkdelay", "GIVE", function(target)
     return not IsSingleGiveAction(target)
 end)
@@ -112,9 +122,11 @@ AddAction("noworkdelay", "NET", function(target)
     return not ThePlayer.components.locomotor or not target:HasTag("butterfly")
 end)
 --[[tools]]
-AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET")
+AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
+  "SHEAR")
 --[[autocollect]]
-AddActionList("autocollect", "CHOP", "DIG", "HAMMER", "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE")
+AddActionList("autocollect", "CHOP", "DIG", "HACK", "HAMMER", "HARVEST", "MINE", "PICK",
+  "PICKUP", "RESETMINE", "SHEAR")
 AddAction("autocollect", "GIVE", function(target)
     return not IsSingleGiveAction(target)
 end)
@@ -198,7 +210,7 @@ local function CompareDeploySpacing(item, spacing)
       return item and (item.replica.inventoryitem) and item.replica.inventoryitem.classified
        and item.replica.inventoryitem.classified.deployspacing:value() == spacing
     else
-      return item and (item.components.deployable) and item.components.deployable.min_spacing:value() == spacing
+      return item and (item.components.deployable) and item.components.deployable.min_spacing == spacing
     end
 end
 
@@ -379,6 +391,7 @@ function ActionQueuer:SelectionBox(rightclick)
         previous_ents = current_ents
     end
     self.selection_thread = StartThread(function()
+      DebugPrint("Selection_thread - start SelectionBox")
         while self.inst:IsValid() do
             if self.queued_movement then
                 self.update_selection()
@@ -492,7 +505,9 @@ function ActionQueuer:IsWalkButtonDown()
       return self.inst.components.playercontroller:IsAnyOfControlsPressed(CONTROL_MOVE_UP, CONTROL_MOVE_DOWN, CONTROL_MOVE_LEFT, CONTROL_MOVE_RIGHT)
     else
       -- ...byt hey, there's already a function for this.
-      return self.inst.components.playercontroller:WalkButtonDown()
+      local down = self.inst.components.playercontroller:WalkButtonDown()
+      DebugPrint("Testing for walkbuttondown: ", down)
+      return down
     end
 end
 
@@ -651,6 +666,7 @@ end
 
 function ActionQueuer:ApplyToSelection()
     self.action_thread = StartThread(function()
+      DebugPrint("Action_thread - start Apply2Selection")
         self.inst:ClearBufferedAction()
         local active_item = self:GetActiveItem()
         while self.inst:IsValid() do
@@ -733,7 +749,8 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
     local row_swap = 1
     self.action_thread = StartThread(function()
         self.inst:ClearBufferedAction()
-        DebugPrint("Action_thread - start")
+        DebugPrint("Action_thread - start dep2sel")
+        DebugPrint("Action Thread in AQ: ",self.action_thread)
         while self.inst:IsValid() do
             DebugPrint("Action_thread - while loop")
             cur_pos.x = start_x + spacing_x * count.x
@@ -788,6 +805,7 @@ end
 
 function ActionQueuer:RepeatRecipe(builder, recipe, skin)
     self.action_thread = StartThread(function()
+      DebugPrint("Action_thread - start RepeatRecipe")
         self.inst:ClearBufferedAction()
         while self.inst:IsValid() and builder:CanBuild(recipe.name) do
             if isDST() then
@@ -810,6 +828,7 @@ function ActionQueuer:StartAutoFisher(target)
         return
     end
     self.action_thread = StartThread(function()
+      DebugPrint("Action_thread - start AutoFisher")
         self.inst:ClearBufferedAction()
         self.auto_fishing = true
         while self.auto_fishing and self.inst:IsValid() and next(self.selected_ents) do
@@ -847,6 +866,7 @@ end
 
 function ActionQueuer:SelectEntity(ent, rightclick)
     if self:IsSelectedEntity(ent) then return end
+    DebugPrint("AQ:SelectEntity - ",ent, rightclick)
     self.selected_ents[ent] = rightclick
     if not ent.components.highlight then
         ent:AddComponent("highlight")
@@ -863,16 +883,10 @@ function ActionQueuer:DeselectEntity(ent)
     DebugPrint("Deselecting Entity: ", ent)
     if self:IsSelectedEntity(ent) then
         DebugPrint("Deselect - removing from internal list:")
-        DebugPrint(self.selected_ents)
         self.selected_ents[ent] = nil
         if ent:IsValid() and ent.components.highlight then
             DebugPrint("Deselect - removing highlight:")
-            DebugPrint(ent.components.highlight)
-            if isDST then
-              ent.components.highlight:UnHighlight()
-            else
-              -- TODO: custom unhighlight, see Finder Fix
-            end
+            ent.components.highlight:UnHighlight()
             DebugPrint(ent.components.highlight)
         end
     end
@@ -921,6 +935,21 @@ function ActionQueuer:ClearAllThreads()
     self:ClearSelectionThread()
     self:ClearSelectedEntities()
     self.selection_widget:Kill()
+end
+
+function ActionQueuer:GetDebugString()
+  local s = ""
+  s = s.."Action Thread "..(self.action_thread ~= nil and "exists\n" or "empty\n")
+  s = s.."Selection Thread "..(self.selection_thread ~= nil and "exists\n" or "empty\n")
+  if self.selected_ents ~= nil then
+    s = s.."Selected entities:"
+    local i = 1
+    for k,_ in pairs(self.selected_ents) do
+      s = s.."\t"..i..": "..k.prefab.."\n"
+      i = i+1
+    end
+  end
+  return s
 end
 
 ActionQueuer.OnRemoveEntity = ActionQueuer.ClearAllThreads
