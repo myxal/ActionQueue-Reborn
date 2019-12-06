@@ -20,6 +20,18 @@ for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "nowo
     allowed_actions[category] = {}
 end
 local offsets = {}
+-- maps prefab names to a table of functions returning true when the player should stop performing each action
+local stop_conditions = {
+  tubertree = {
+    HACK = function(ent)
+      if ent.tubers then
+        return (ent.tubers < 1)
+      else
+        return nil
+      end
+    end
+  }
+}
 for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}) do
     offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
 end
@@ -167,6 +179,18 @@ end)
 
 local function IsValidEntity(ent)
     return ent and ent.Transform and ent:IsValid() and not ent:HasTag("INLIMBO")
+end
+
+local function ShouldSkipEntity(ent,action)
+--[[ Returns true if the work loop should be interrupted regardless of other
+conditions. For example, tubertrees will not be hacked beyond having 0 tubers.
+Is also used to filter entities when making selection.
+]]
+  local act_id = action.action and action.action.id or action
+  if stop_conditions[ent.prefab] ~= nil and stop_conditions[ent.prefab][act_id] then
+    return stop_conditions[ent.prefab][act_id](ent)
+  end
+  return false
 end
 
 local function IsHUDEntity()
@@ -377,7 +401,7 @@ function ActionQueuer:SelectionBox(rightclick)
                 if IsBounded(pos) then
                     if not self:IsSelectedEntity(ent) and not previous_ents[ent] then
                         local act, rightclick_ = self:GetAction(ent, rightclick, pos)
-                        if act then self:SelectEntity(ent, rightclick_) end
+                        if act and not ShouldSkipEntity(ent, act) then self:SelectEntity(ent, rightclick_) end
                     end
                     current_ents[ent] = true
                 end
@@ -410,7 +434,7 @@ function ActionQueuer:CherryPick(rightclick)
         for _, ent in pairs(TheSim:FindEntities(x, y, z, self.double_click_range, nil, unselectable_tags)) do
             if ent.prefab == self.last_click.prefab and IsValidEntity(ent) and not self:IsSelectedEntity(ent) then
                 local act, rightclick_ = self:GetAction(ent, rightclick)
-                if act and act.action == self.last_click.action then
+                if act and (act.action == self.last_click.action) and not ShouldSkipEntity(ent,act) then
                     self:SelectEntity(ent, rightclick_)
                 end
             end
@@ -706,6 +730,7 @@ function ActionQueuer:ApplyToSelection()
                             if not act then break end
                         end
                         if act.action ~= current_action then break end
+                        if ShouldSkipEntity(target,act) then break end
                         self:SendActionAndWait(act, rightclick, target)
                     end
                 end
