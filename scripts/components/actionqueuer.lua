@@ -610,12 +610,22 @@ function ActionQueuer:DropActiveItem(pos, item)
 end
 
 function ActionQueuer:TerraformAtPoint(pos, item)
-    local x, y, z = pos:Get()
+    local arbiterfn
+    if _isDST then
+      arbiterfn = function(pos)
+        local x, y, z = pos:Get()
+        return TheWorld.Map:CanTerraformAtPoint(pos:Get())
+      end
+    else
+      arbiterfn = function(pos)
+        return self:GetEquippedItemInHand().components.terraformer:CanTerraformPoint(pos)
+      end
+    end
     if not self:GetEquippedItemInHand() then return false end
-    if TheWorld.Map:CanTerraformAtPoint(x, y, z) then
+    if arbiterfn(pos) then
         local act = BufferedAction(self.inst, nil, ACTIONS.TERRAFORM, item, pos)
         self:SendActionAndWait(act, true)
-        while TheWorld.Map:CanTerraformAtPoint(x, y, z) do
+        while arbiterfn(pos) do
             Sleep(self.action_delay)
         end
         if self.auto_collect then

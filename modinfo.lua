@@ -5,12 +5,9 @@ TODO:
 - check if shears work correctly on vines (what  action is that?)
 - InGame should return false on map screen
 - After doing DeployToSelection, double-click to pick up doesn't work for some reason (ActionThread and selected_ents are there, they're simply not doing anything); seen with both coconuts and jungletreeseeds
-- queueing terraforming action? You're gonna have a bad time...
 UNTESTED:
 - fishing
-- terraforming
 - giving
-- oh yeah.. check if this still works in DST
 ]]
 
 name = "ActionQueue Reborn"
