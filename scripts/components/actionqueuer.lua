@@ -289,8 +289,8 @@ function ActionQueuer:Wait(action, target)
           and self.inst.sg:HasStateTag("moving")
         ) and not self.inst:HasTag("moving")
         and (
-          isDST() and self.inst:HasTag("idle")
-          or self.inst.sg:HasStateTag("idle")
+          (_isDST and self.inst:HasTag("idle"))
+          or (not _isDST and self.inst.sg:HasStateTag("idle"))
         ) and not self.inst.components.playercontroller:IsDoingOrWorking()
     end
     DebugPrint("Time waited:", GetTime() - current_time)
