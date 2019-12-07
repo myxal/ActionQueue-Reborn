@@ -17,11 +17,11 @@ Where applicable, the original mod's features should work in singleplayer in the
 [b]Want to contribute code, or translation (including this workshop description)?[/b]
 Pull requests, patches are welcome at [url=https://github.com/myxal/ActionQueue-Reborn]Github[/url].
 You may also leave a comment in the [appropriate discussion thread here.
-#TODO URL
+https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690813776/
 
 [b]The mod isn't working right.[/b]
 First, head over to the bug report thread and read the first post. (TL;DR: Simple issues are fine to report here or there, otherwise follow the attached debugging howto)
-#TODO URL
+https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690807574/
 
 
 [h2]Known issues/planned features
