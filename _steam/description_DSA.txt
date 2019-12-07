@@ -1,36 +1,45 @@
-[h2]Work-in-progress quality warning[/h2]
+[h1]Work-in-progress quality warning[/h1]
 This mod is currently in alpha. Features may not work right, crashes may occur, etc.
 
 
-[h2]ActionQueue Reborn for Don't Starve[/h2]
+[h1][b][u]ActionQueue Reborn for Don't Starve[/u][/b][/h1]
 This is a Don't Starve (Alone) port of [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1608191708]eXiGe's ActionQueue Reborn[/url]. The additions made by eXiGe were too good to pass up in singleplayer, and DST ports of Shipwrecked and Hamlet content just don't cut it for me. So I decided to bring this rewritten and extended Action Queue to singleplayer.
 
 Where applicable, the original mod's features should work in singleplayer in the same way. On top of these features, this singleplayer version adds the following:
+
+[b]Shipwrecked, Hamlet actions added:[/b]
 [list]
-[*]Shipwrecked, Hamlet actions added:
-[**]Hacking
-[**]Shearing
-[*]Entity filter: When selecting multiple targets, skip undesirable targets (a beefalo that's already shaved, a tuber tree that has no tubers left, a bee box that has no honey, etc). This filter will also prevent ActionQueue from automatically continuing to work on these items, destroying non-renewable resources.
+[*]Hacking
+[*]Shearing
 [/list]
 
-[h2]Contributing[/h2]
+[b]New features[/b]
+[list]
+[*]Entity filter: Avoid trying to shave already hairless beefalo, harvest beebox with no honey, or hacking down tuber trees beyond regrowth.
+[/list]
+
+[b]Planned features[/b]
+[list]
+[*] AutoBuyer - Keep buying from pedestals that always restock the same item (10- and 100-piece oincs, ice)
+[/list]
+
+[h1]Contributing, reporting issues[/h1]
 [b]Want to contribute code, or translation (including this workshop description)?[/b]
 Pull requests, patches are welcome at [url=https://github.com/myxal/ActionQueue-Reborn]Github[/url].
-You may also leave a comment in the [appropriate discussion thread here.
-https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690813776/
+You may also leave a comment in the appropriate discussion thread here: [url=https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690813776/][u]CONTRIBUTIONS[/u][/url]
 
 [b]The mod isn't working right.[/b]
 First, head over to the bug report thread and read the first post. (TL;DR: Simple issues are fine to report here or there, otherwise follow the attached debugging howto)
-https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690807574/
 
+[url=https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690807574/][u]BUG REPORTS[/u][/url]
 
-[h2]Known issues/planned features
+[h1]Known issues[/h1]
+[b]BUGS:[/b]
 [list]
-[*]Planned features:
-[**] AutoBuyer - Keep buying from pedestals that always restock the same item (10- and 100-piece oincs, ice)
-[*]BUGS:
+[*] Too many to list
 [/list]
-[h2]Original Description[/h2]
+
+[h1]Original Description[/h1]
 
 This version of Action Queue has been completely rewritten with a focus on fixing all the underlying issues with the previous versions, optimizing and minimizing any performance impact, along with adding several new features. [url=https://steamcommunity.com/sharedfiles/filedetails/?id=609051112]Action Queue DST[/url] ported by [url=https://steamcommunity.com/profiles/76561198161551641]xiaoXzzz[/url] has been a great addition to my collection of mods, and it was only after using it for more than a year, that I decided I wanted to undertake fixing the few issues it had.
 
