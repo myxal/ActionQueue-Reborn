@@ -3,8 +3,8 @@ TODO:
 - #probably fixed, or equal to pt.2# highlight is broken, pt.1 - high;ight is left on things that are picked up
 - highlight is broken, pt.2 - deselected items don't apparrently drop highlight until mouse-over
 - check if shears work correctly on vines (what  action is that?)
-- InGame should return false on map screen
 - After doing DeployToSelection, double-click to pick up doesn't work for some reason (ActionThread and selected_ents are there, they're simply not doing anything); seen with both coconuts and jungletreeseeds
+- Add buying to actions
 UNTESTED:
 - fishing
 - giving
@@ -13,7 +13,7 @@ UNTESTED:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_2"
+version = "1.046+myxal_3"
 api_version_dst = 10
 
 icon_atlas = "modicon.xml"

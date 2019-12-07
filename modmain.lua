@@ -76,15 +76,11 @@ local function GetKeyFromConfig(config)
 end
 
 local function InGame()
-  -- if isDST() then
-  --   return ThePlayer and ThePlayer.HUD and not ThePlayer.HUD:HasInputFocus()
-  -- else
-  --   local p = _G:GetPlayer()
-  --   return (p and p.HUD)
-  -- end
   local screen = _G.TheFrontEnd:GetActiveScreen()
   if (screen ~= nil and screen.name:find("HUD") ~= nil) then
-    return true
+    if _isDST then return true end
+    return screen.owner ~= nil
+    -- and screen.owner == _G:GetPlayer()
   else
     return false
   end
