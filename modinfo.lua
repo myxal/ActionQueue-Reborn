@@ -5,7 +5,7 @@ TODO:
 - check if shears work correctly on vines (what  action is that?)
 - After doing DeployToSelection, double-click to pick up doesn't work for some reason (ActionThread and selected_ents are there, they're simply not doing anything); seen with both coconuts and jungletreeseeds
 - Implement autobuyer
-- Autofisher porting: shoal doesn't have the fishble tag, but does have the component. It may be hidden, in which case we shouldn't cheese fishing in it.
+- Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
 ]]
 
 name = "ActionQueue Reborn"

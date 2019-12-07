@@ -183,7 +183,17 @@ AddComponentPostInit("playercontroller", function(self, inst)
     ThePlayer = isDST() and _G.ThePlayer or _G.GetPlayer()
     TheWorld = isDST() and _G.TheWorld or _G.GetWorld()
     ActionQueuerInit()
-
+    local can_fish_fn = function(inst, target)
+      local hasfishingrod = (_isDST and inst.replica.inventory:EquipHasTag("fishingrod"))
+        or (inst.components.inventory:GetEquippedItem(_G.EQUIPSLOTS.HANDS).prefab == "fishingrod")
+      DebugPrint("can_fish_fn - hasfishingrod: ", hasfishingrod)
+      DebugPrint("can_fish_fn - is fishable: ",(target and (target:HasTag("fishable") or (target.components.fishable))
+      and target.active ~= false))
+      return
+        target and (target:HasTag("fishable") or (target.components.fishable))
+        and target.active ~= false -- this is used by shoals
+        and hasfishingrod
+      end
     local PlayerControllerOnControl = self.OnControl
     self.OnControl = function(self, control, down)
         local mouse_control = mouse_controls[control]
@@ -192,7 +202,8 @@ AddComponentPostInit("playercontroller", function(self, inst)
             if down then
                 if TheInput:IsAqModifierDown(action_queue_key) then
                     local target = TheInput:GetWorldEntityUnderMouse()
-                    if target and target:HasTag("fishable") and ((isDST() and inst.replica.inventory:EquipHasTag("fishingrod")) or inst.components.inventory:EquipHasTag("fishingrod")) then
+                    if can_fish_fn(inst, target) then
+                        DebugPrint("PC-OnControl - starting autofisher")
                         ActionQueuer:StartAutoFisher(target)
                     elseif not ActionQueuer.auto_fishing then
                         ActionQueuer:OnDown(mouse_control)
