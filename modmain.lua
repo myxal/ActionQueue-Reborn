@@ -204,14 +204,14 @@ AddComponentPostInit("playercontroller", function(self, inst)
             end
         end
         PlayerControllerOnControl(self, control, down)
-        DebugPrint("PCOnControl; control: ", control, ", down: ", down, ", inGame: ", InGame(), ", ActionThread: ", ActionQueuer.action_thread ~= nil, ", SelectionThread: ", ActionQueuer.selection_thread ~= nil)
+        -- DebugPrint("PCOnControl; control: ", control, ", down: ", down, ", inGame: ", InGame(), ", ActionThread: ", ActionQueuer.action_thread ~= nil, ", SelectionThread: ", ActionQueuer.selection_thread ~= nil)
         local screen = _G.TheFrontEnd:GetActiveScreen()
         if down and ActionQueuer.action_thread and not ActionQueuer.selection_thread and InGame()
           and (interrupt_controls[control] or mouse_control ~= nil and not TheInput:GetHUDEntityUnderMouse()) then
             DebugPrint("Down handler entered, clearing action thread")
             ActionQueuer:ClearActionThread()
             if always_clear_queue or control == CONTROL_ACTION then
-                DebugPrint("Down handler - clearing selected entities")
+                -- DebugPrint("Down handler - clearing selected entities")
                 ActionQueuer:ClearSelectedEntities()
             end
         end
@@ -268,12 +268,13 @@ AddComponentPostInit("highlight", function(self, inst)
     local HighlightUnHighlight = self.UnHighlight
     self.UnHighlight = function(self)
         -- DebugPrint("Entered UnHighlight() with item: ", inst)
-        if ActionQueuer:IsSelectedEntity(inst) then return end
+        if ActionQueuer:IsSelectedEntity(inst) then DebugPrint(inst," is selected - skipping unhighlight")return end
         -- DebugPrint("Calling game's UnHighlight for item: ", inst)
         if isDST() then
           HighlightUnHighlight(self)
         else
           -- TODO: This seems broken in DSA
+          DebugPrint("Unhighlighting ", self)
           HighlightUnHighlight(self)
         end
     end

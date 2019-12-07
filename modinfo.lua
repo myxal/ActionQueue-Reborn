@@ -4,10 +4,8 @@ TODO:
 - highlight is broken, pt.2 - deselected items don't apparrently drop highlight until mouse-over
 - check if shears work correctly on vines (what  action is that?)
 - After doing DeployToSelection, double-click to pick up doesn't work for some reason (ActionThread and selected_ents are there, they're simply not doing anything); seen with both coconuts and jungletreeseeds
-- Add buying to actions
-UNTESTED:
-- fishing
-- giving
+- Implement autobuyer
+- Autofisher porting: shoal doesn't have the fishble tag, but does have the component. It may be hidden, in which case we shouldn't cheese fishing in it.
 ]]
 
 name = "ActionQueue Reborn"

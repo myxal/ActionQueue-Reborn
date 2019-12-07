@@ -867,24 +867,31 @@ function ActionQueuer:StartAutoFisher(target)
         self.inst:ClearBufferedAction()
         self.auto_fishing = true
         while self.auto_fishing and self.inst:IsValid() and next(self.selected_ents) do
+            DebugPrint("AutoFisher - outer loop")
             for pond in pairs(self.selected_ents) do
+                DebugPrint("AutoFisher - inner loop")
                 local fishingrod = self:GetEquippedItemInHand() or self:GetNewEquippedItemInHand("fishingrod")
                 if not fishingrod then self.auto_fishing = false break end
                 local pos = pond:GetPosition()
                 local fish_act = BufferedAction(self.inst, pond, ACTIONS.FISH, fishingrod, pos)
                 while not self.inst:HasTag("nibble") do
                     if not self.inst:HasTag("fishing") and self.inst:HasTag("idle") then
+                        DebugPrint("AutoFisher sending FISH action")
                         self:SendAction(fish_act, false, pond)
                     end
                     Sleep(self.action_delay)
                 end
+                DebugPrint("AutoFisher after FISH action")
                 local catch_act = BufferedAction(self.inst, pond, ACTIONS.REEL, fishingrod, pos)
                 self:SendAction(catch_act, false, pond)
+                DebugPrint("AutoFisher sent REEL 1st time")
                 Sleep(self.action_delay)
                 self:SendActionAndWait(catch_act, false, pond)
+                DebugPrint("AutoFisher sent REEL 2nd time")
                 local fish = FindEntity(self.inst, 2, nil, {"fish"})
                 if fish then
                     local pickup_act = BufferedAction(self.inst, fish, ACTIONS.PICKUP, nil, fish:GetPosition())
+                    DebugPrint("AutoFisher sending PICKUP on fish: ", fish)
                     self:SendActionAndWait(pickup_act, false, fish)
                 end
             end
