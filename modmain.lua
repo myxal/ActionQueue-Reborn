@@ -184,15 +184,12 @@ AddComponentPostInit("playercontroller", function(self, inst)
     TheWorld = isDST() and _G.TheWorld or _G.GetWorld()
     ActionQueuerInit()
     local can_fish_fn = function(inst, target)
-      local hasfishingrod = (_isDST and inst.replica.inventory:EquipHasTag("fishingrod"))
-        or (inst.components.inventory:GetEquippedItem(_G.EQUIPSLOTS.HANDS).prefab == "fishingrod")
-      DebugPrint("can_fish_fn - hasfishingrod: ", hasfishingrod)
-      DebugPrint("can_fish_fn - is fishable: ",(target and (target:HasTag("fishable") or (target.components.fishable))
-      and target.active ~= false))
+      local handitem = inst.components.inventory:GetEquippedItem(_G.EQUIPSLOTS.HANDS)
+      if not (handitem ~= nil and handitem.prefab == "fishingrod") then return false end
       return
         target and (target:HasTag("fishable") or (target.components.fishable))
         and target.active ~= false -- this is used by shoals
-        and hasfishingrod
+        -- and hasfishingrod  -- already true
       end
     local PlayerControllerOnControl = self.OnControl
     self.OnControl = function(self, control, down)
@@ -285,7 +282,7 @@ AddComponentPostInit("highlight", function(self, inst)
           HighlightUnHighlight(self)
         else
           -- TODO: This seems broken in DSA
-          DebugPrint("Unhighlighting ", self)
+          -- DebugPrint("Unhighlighting ", self)
           HighlightUnHighlight(self)
         end
     end

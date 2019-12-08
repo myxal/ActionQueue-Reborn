@@ -612,11 +612,11 @@ function ActionQueuer:DeployActiveItem(pos, item)
         end
         DebugPrint("AQ:DeployActiveItem - SendActionAndWait, pos: ", pos)
         self:SendActionAndWait(act, true)
-        if not playercontroller.ismastersim and not CompareDeploySpacing(active_item, DEPLOYSPACING.NONE) then
-            while inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) do
-                Sleep(self.action_delay)
-            end
-        end
+        -- if _isDST and not playercontroller.ismastersim and not CompareDeploySpacing(active_item, DEPLOYSPACING.NONE) then
+        --     while inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) do
+        --         Sleep(self.action_delay)
+        --     end
+        -- end
     end
     DebugPrint("AQ:DeployActiveItem - complete, returning true on pos ", pos)
     return true
@@ -821,18 +821,17 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
                 count[X] = count[X] + row_swap
             end
             local accessible_pos = cur_pos
-            -- DebugPrint("accessible_pos: ", accessible_pos)
             if terraforming then
                 accessible_pos = GetAccessibleTilePosition(cur_pos)
             end
-            DebugPrint("Current Position:", accessible_pos or "skipped")
+            DebugPrint("DeployToSelection - accessible_pos: ", accessible_pos)
             if accessible_pos then
-                DebugPrint("Running deploy_fn")
+                DebugPrint("DeployToSelection - running deploy_fn ")
                 if not deploy_fn(self, accessible_pos, item) then DebugPrint("deploy_fn returned false") break end
             end
             DebugPrint("DeployToSelection - am I still valid?", self.inst:IsValid())
         end
-        DebugPrint("Action Thread - while loop terminated")
+        DebugPrint("DeployToSelection Action Thread - while loop terminated")
         self:ClearActionThread()
         self.inst:DoTaskInTime(0, function() if next(self.selected_ents) then self:ApplyToSelection() end end)
     end, action_thread_id)
