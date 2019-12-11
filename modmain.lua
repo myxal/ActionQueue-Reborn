@@ -264,29 +264,18 @@ else
 
   end)
 end
+Highlight = _G.require("components/highlight")
+Highlight.UnHighlight = (function()
+	local UnHighlight = _G.assert(Highlight.UnHighlight)
+	return function(self, ...)
+		local p = ThePlayer
+		if p and p.components.actionqueuer and p.components.actionqueuer:IsSelectedEntity(self.inst) then
+			return
+		end
+		return UnHighlight(self, ...)
+	end
+end)()
 
-AddComponentPostInit("highlight", function(self, inst)
-    local HighlightHighlight = self.Highlight
-    self.Highlight = function(self, ...)
-        -- DebugPrint("Entered Highlight() with item: ", inst)
-        if ActionQueuer.selection_thread or ActionQueuer:IsSelectedEntity(inst) then return end
-        -- DebugPrint("Calling game's Highlight for item: ", inst)
-        HighlightHighlight(self, ...)
-    end
-    local HighlightUnHighlight = self.UnHighlight
-    self.UnHighlight = function(self)
-        -- DebugPrint("Entered UnHighlight() with item: ", inst)
-        if ActionQueuer:IsSelectedEntity(inst) then DebugPrint(inst," is selected - skipping unhighlight")return end
-        -- DebugPrint("Calling game's UnHighlight for item: ", inst)
-        if isDST() then
-          HighlightUnHighlight(self)
-        else
-          -- TODO: This seems broken in DSA
-          -- DebugPrint("Unhighlighting ", self)
-          HighlightUnHighlight(self)
-        end
-    end
-end)
 --for minimizing the memory leak in geo
 --hides the geo grid during an action queue
 AddComponentPostInit("placer", function(self, inst)

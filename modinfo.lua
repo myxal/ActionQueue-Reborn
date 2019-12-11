@@ -1,7 +1,6 @@
 --[[
 TODO:
-- #probably fixed, or equal to pt.2# highlight is broken, pt.1 - high;ight is left on things that are picked up
-- highlight is broken, pt.2 - deselected items don't apparrently drop highlight until mouse-over
+- highlight adopted from ActionQueue SW - doesn't use configured colour
 - Implement autobuyer
 - Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
 - AutoFisher can be started when the target is not reachable
@@ -13,7 +12,7 @@ TODO:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_4"
+version = "1.046+myxal_5"
 api_version_dst = 10
 
 icon_atlas = "modicon.xml"

@@ -907,15 +907,19 @@ function ActionQueuer:SelectEntity(ent, rightclick)
     if self:IsSelectedEntity(ent) then return end
     DebugPrint("AQ:SelectEntity - ",ent, rightclick)
     self.selected_ents[ent] = rightclick
-    if not ent.components.highlight then
-        ent:AddComponent("highlight")
-    end
     local highlight = ent.components.highlight
-    highlight.highlight_add_colour_red = nil
-    highlight.highlight_add_colour_green = nil
-    highlight.highlight_add_colour_blue = nil
-    highlight:SetAddColour(self.color)
-    highlight.highlit = true
+    if not highlight then
+        ent:AddComponent("highlight")
+        highlight = ent.components.highlight
+    end
+    if not highlight.highlit then
+			local override = ent.highlight_override
+			if override then
+				highlight:Highlight(override[1], override[2], override[3])
+			else
+				highlight:Highlight()
+			end
+		end
 end
 
 function ActionQueuer:DeselectEntity(ent)
@@ -924,9 +928,8 @@ function ActionQueuer:DeselectEntity(ent)
         DebugPrint("Deselect - removing from internal list:")
         self.selected_ents[ent] = nil
         if ent:IsValid() and ent.components.highlight then
-            DebugPrint("Deselect - removing highlight:")
+            DebugPrint("Deselect - removing highlight: ",tostring(ent))
             ent.components.highlight:UnHighlight()
-            DebugPrint(ent.components.highlight)
         end
     end
 end
@@ -940,9 +943,7 @@ function ActionQueuer:ToggleEntitySelection(ent, rightclick)
 end
 
 function ActionQueuer:ClearSelectedEntities()
-    DebugPrint("ClearSelectedEntities called")
     for ent in pairs(self.selected_ents) do
-        DebugPrint("CSE: Deselecting ", ent)
         self:DeselectEntity(ent)
     end
 end
@@ -980,6 +981,7 @@ function ActionQueuer:GetDebugString()
   local s = ""
   s = s.."Action Thread "..(self.action_thread ~= nil and "exists\n" or "empty\n")
   s = s.."Selection Thread "..(self.selection_thread ~= nil and "exists\n" or "empty\n")
+  s = s.."Selection colour: "..tostring(self.color.x)..", "..tostring(self.color.y)..", "..tostring(self.color.z).."\n"
   if self.selected_ents ~= nil then
     s = s.."Selected entities:"
     local i = 1
