@@ -5,6 +5,9 @@ TODO:
 - Implement autobuyer
 - Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
 - AutoFisher can be started when the target is not reachable
+- Selection colour is not used with highlight, I think
+- Retrieve (fishingrod on watery grave) doesn't seem to work right
+- check if cargo boat inventory should be included in tool re-equip
 ]]
 
 name = "ActionQueue Reborn"

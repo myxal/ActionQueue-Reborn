@@ -91,14 +91,14 @@ local function IsSingleGiveAction(target)
 end
 
 --[[allclick]]
-AddActionList("allclick", "CHOP", "MINE", "NET", "HACK", "SHEAR")
+AddActionList("allclick", "CHOP", "MINE", "NET", "HACK", "SHEAR", "STICK")
 AddAction("allclick", "ATTACK", function(target)
     return target:HasTag("wall")
 end)
 --[[leftclick]]
 AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
   "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL",
-  "GIVE", "HAUNT", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL", "REPAIR_LEAK",
+  "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL", "REPAIR_LEAK",
   "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
 AddAction("leftclick", "ACTIVATE", function(target)
     return target.prefab == "dirtpile"
@@ -106,10 +106,11 @@ end)
 AddAction("leftclick", "HARVEST", function(target)
     return target.prefab ~= "birdcage"
 end)
-AddAction("leftclick", "HEAL", function(target)
-    --ThePlayer can only heal themselves, not other players
-    return target == ThePlayer or not target:HasTag("player")
-end)
+-- No limit on who we're allowed to heal
+-- AddAction("leftclick", "HEAL", function(target)
+--     --ThePlayer can only heal themselves, not other players
+--     return target == ThePlayer or not target:HasTag("player")
+-- end)
 AddAction("leftclick", "PICK", function(target)
     return target.prefab ~= "flower_evil"
 end)
@@ -126,7 +127,7 @@ AddAction("single", "GIVE", IsSingleGiveAction)
 --[[noworkdelay]]
 AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP", "COOK",
   "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER", "HARVEST", "HEAL",
-  "MINE", "PLANT", "REPAIR", "SHEAR", "TERRAFORM", "UPGRADE")
+  "MINE", "PLANT", "REPAIR", "SHEAR", "STICK", "TERRAFORM", "UPGRADE")
 AddAction("noworkdelay", "GIVE", function(target)
     return not IsSingleGiveAction(target)
 end)
