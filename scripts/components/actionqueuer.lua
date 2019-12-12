@@ -643,7 +643,8 @@ function ActionQueuer:TerraformAtPoint(pos, item)
       end
     else
       arbiterfn = function(pos)
-        return self:GetEquippedItemInHand().components.terraformer:CanTerraformPoint(pos)
+        local handitem = self:GetEquippedItemInHand()
+        return handitem and handitem.components.terraformer and components.terraformer:CanTerraformPoint(pos)
       end
     end
     if not self:GetEquippedItemInHand() then return false end
