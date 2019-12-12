@@ -22,16 +22,34 @@ end
 local offsets = {}
 -- maps prefab names to a table of functions returning true when the player should stop performing each action
 local stop_conditions = {
-  tubertree = {
-    HACK = function(ent)
+  HACK = {
+    tubertree = function(ent)
       if ent.tubers then
         return (ent.tubers < 1)
       else
         return nil
       end
     end
+  },
+  ADDFUEL = {
+    AQ_ANY = function(ent)
+      return ent.components.fueled and
+        ent.components.fueled.accepting and
+        (ent.components.fueled.currentfuel / ent.components.fueled.maxfuel) >= 0.95
+      end
   }
 }
+-- local stop_conditions = {
+--   tubertree = {
+--     HACK = function(ent)
+--       if ent.tubers then
+--         return (ent.tubers < 1)
+--       else
+--         return nil
+--       end
+--     end
+--   }
+-- }
 for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}) do
     offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
 end
@@ -188,8 +206,12 @@ conditions. For example, tubertrees will not be hacked beyond having 0 tubers.
 Is also used to filter entities when making selection.
 ]]
   local act_id = action.action and action.action.id or action
-  if stop_conditions[ent.prefab] ~= nil and stop_conditions[ent.prefab][act_id] then
-    return stop_conditions[ent.prefab][act_id](ent)
+  if stop_conditions[act_id] ~= nil then
+    if stop_conditions[act_id][ent.prefab] then
+      return stop_conditions[act_id][ent.prefab](ent)
+    elseif stop_conditions[act_id].AQ_ANY then
+      return stop_conditions[act_id].AQ_ANY(ent)
+    end
   end
   return false
 end
