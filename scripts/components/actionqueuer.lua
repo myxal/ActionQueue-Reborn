@@ -9,13 +9,8 @@ local unselectable_tags = {"DECOR", "FX", "INLIMBO", "NOCLICK", "player"}
 local selection_thread_id = "actionqueue_selection_thread"
 local action_thread_id = "actionqueue_action_thread"
 local allowed_actions = {}
-local _isDST = (_G.TheSim:GetGameID() == 'DST')
 local TheWorld
-if _isDST then
-  TheWorld = _G.TheWorld
-else
-  TheWorld = GetWorld()
-end
+TheWorld = GetWorld()
 for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "noworkdelay", "tools", "autocollect", "collect"}) do
     allowed_actions[category] = {}
 end
@@ -39,6 +34,7 @@ local stop_conditions = {
       end
   }
 }
+stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
 -- local stop_conditions = {
 --   tubertree = {
 --     HACK = function(ent)
@@ -52,10 +48,6 @@ local stop_conditions = {
 -- }
 for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}) do
     offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
-end
-
-local function isDST()
-  return _isDST
 end
 
 local DebugPrint = TUNING.ACTION_QUEUE_DEBUG_MODE and function(...)
@@ -234,12 +226,7 @@ local function GetDeploySpacing(item)
     for key, spacing in pairs(deploy_spacing) do
         if item.prefab:find(key) or item:HasTag(key) then return spacing end
     end
-    local spacing
-    if isDST() then
-      spacing = item.replica.inventoryitem:DeploySpacingRadius()
-    else
-      spacing = item.components.deployable.min_spacing
-    end
+    local spacing = item.components.deployable.min_spacing
     return spacing ~= 0 and spacing or 1
 end
 
@@ -253,12 +240,7 @@ end
 local function CompareDeploySpacing(item, spacing)
     if item == nil then return end
     local comps
-    if isDST() then
-      return item and (item.replica.inventoryitem) and item.replica.inventoryitem.classified
-       and item.replica.inventoryitem.classified.deployspacing:value() == spacing
-    else
-      return item and (item.components.deployable) and item.components.deployable.min_spacing == spacing
-    end
+    return item and (item.components.deployable) and item.components.deployable.min_spacing == spacing
 end
 
 
@@ -311,10 +293,8 @@ function ActionQueuer:Wait(action, target)
           self.inst.sg
           and self.inst.sg:HasStateTag("moving")
         ) and not self.inst:HasTag("moving")
-        and (
-          (_isDST and self.inst:HasTag("idle"))
-          or (not _isDST and self.inst.sg:HasStateTag("idle"))
-        ) and not self.inst.components.playercontroller:IsDoingOrWorking()
+        and self.inst.sg:HasStateTag("idle")
+        and not self.inst.components.playercontroller:IsDoingOrWorking()
     end
     DebugPrint("Time waited:", GetTime() - current_time)
 end
@@ -323,12 +303,7 @@ function ActionQueuer:GetAction(target, rightclick, pos)
     local pos = pos or target:GetPosition()
     local playeractionpicker = self.inst.components.playeractionpicker
     if rightclick then
-        local rcactions
-        if isDST() then
-          rcactions = playeractionpicker:GetRightClickActions(pos, target)
-        else
-          rcactions = playeractionpicker:GetRightClickActions(target, pos)
-        end
+        local rcactions = playeractionpicker:GetRightClickActions(target, pos)
         for _, act in ipairs(rcactions) do
             if CheckAllowedActions("rightclick", act.action, target) then
                 DebugPrint("Allowed rightclick action:", act)
@@ -350,32 +325,9 @@ end
 function ActionQueuer:SendAction(act, rightclick, target)
     DebugPrint("Sending action:", act)
     local playercontroller = self.inst.components.playercontroller
-    if playercontroller.ismastersim or not isDST() then
-        DebugPrint("Doing action directly")
-        self.inst.components.combat:SetTarget(nil)
-        playercontroller:DoAction(act)
-        return
-    end
-    DebugPrint("If you're seeing this in DSA, something went wrong!")
-    -- The remainder should never get executed on DSA
-    local pos = act:GetActionPoint() or self.inst:GetPosition()
-    local controlmods = 10 --force stack and force attack
-    if playercontroller.locomotor then
-        act.preview_cb = function()
-            if rightclick then
-                SendRPCToServer(RPC.RightClick, act.action.code, pos.x, pos.z, target, act.rotation, true, nil, nil, act.action.mod_name)
-            else
-                SendRPCToServer(RPC.LeftClick, act.action.code, pos.x, pos.z, target, true, controlmods, nil, act.action.mod_name)
-            end
-        end
-        playercontroller:DoAction(act)
-    else
-        if rightclick then
-            SendRPCToServer(RPC.RightClick, act.action.code, pos.x, pos.z, target, act.rotation, true, nil, act.action.canforce, act.action.mod_name)
-        else
-            SendRPCToServer(RPC.LeftClick, act.action.code, pos.x, pos.z, target, true, controlmods, act.action.canforce, act.action.mod_name)
-        end
-    end
+    self.inst.components.combat:SetTarget(nil)
+    playercontroller:DoAction(act)
+    return
 end
 
 function ActionQueuer:SendActionAndWait(act, rightclick, target)
@@ -511,7 +463,7 @@ function ActionQueuer:OnUp(rightclick)
                         return
                     end
                 end
-                local _isdeployable = (isDST() and active_item.replica.inventoryitem:IsDeployable(self.inst)) or active_item.components.inventoryitem:IsDeployable(self.inst)
+                local _isdeployable = active_item.components.inventoryitem:IsDeployable(self.inst)
                 if _isdeployable then
                     DebugPrint("AQ:OnUp - issuing DeployToSelection with DeployActiveItem")
                     self:DeployToSelection(self.DeployActiveItem, GetDeploySpacing(active_item), active_item)
@@ -529,7 +481,7 @@ function ActionQueuer:OnUp(rightclick)
             local recipe = playercontroller.placer_recipe
             local rotation = playercontroller.placer:GetRotation()
             local skin = playercontroller.placer_recipe_skin
-            local builder = isDST() and self.inst.replica.builder or self.inst.components.builder
+            local builder = self.inst.components.builder
             local spacing = recipe.min_spacing > 2 and 4 or 2
             self:DeployToSelection(function(self, pos, item)
                 if not builder:IsBuildBuffered(recipe.name) then
@@ -547,47 +499,26 @@ function ActionQueuer:OnUp(rightclick)
 end
 
 function ActionQueuer:IsWalkButtonDown()
-    if isDST() then
-      -- Not sure why extending playercontroller in DSA with the DST's implementation doesn't work as expected.
-      return self.inst.components.playercontroller:IsAnyOfControlsPressed(CONTROL_MOVE_UP, CONTROL_MOVE_DOWN, CONTROL_MOVE_LEFT, CONTROL_MOVE_RIGHT)
-    else
-      -- ...byt hey, there's already a function for this.
-      local down = self.inst.components.playercontroller:WalkButtonDown()
-      DebugPrint("Testing for walkbuttondown: ", down)
-      return down
-    end
+    return self.inst.components.playercontroller:WalkButtonDown()
 end
 
 function ActionQueuer:GetActiveItem()
-    if isDST() then
-      return self.inst.replica.inventory:GetActiveItem()
-    else
-      return self.inst.components.inventory:GetActiveItem()
-    end
+    return self.inst.components.inventory:GetActiveItem()
 end
 
 function ActionQueuer:GetEquippedItemInHand()
-    if isDST() then
-      return self.inst.replica.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
-    else
-      return self.inst.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
-    end
+    return self.inst.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
 end
 
 function ActionQueuer:GetNewItem(prefab, fn_name, use_item)
     DebugPrint("GetNewItem, prefab: ", prefab, ", fn_name: ", fn_name, ", use_item: ", use_item)
-    local inventory = isDST() and self.inst.replica.inventory or self.inst.components.inventory
+    local inventory = self.inst.components.inventory
     local body_item = inventory:GetEquippedItem(EQUIPSLOTS.BODY)
-    local backpack
-    if _isDST then
-      backpack = body_item and (body_item.replica.container or body_item.components.container)
-    else
-      backpack = body_item and body_item.components.container
-    end
+    local backpack = body_item and body_item.components.container
     for _, inventory in pairs(backpack and {inventory, backpack} or {inventory}) do
         DebugPrint("Checking inventory: ", inventory.inst)
         local items
-        if (not isDST() and inventory.type == nil) then
+        if (inventory.type == nil) then
           DebugPrint("Getting items from main inventory")
           items = inventory.itemslots
         else
@@ -611,7 +542,6 @@ end
 function ActionQueuer:GetNewActiveItem(prefab)
     DebugPrint("Entered AQ:GetNewActiveItem with prefab: ", prefab)
     return self:GetNewItem(prefab, "TakeActiveItemFromAllOfSlot")
-    -- This is a DST-specific function that takes an item from a slot in an inventory, and makes it "active", ie held by player's pointer
 end
 
 function ActionQueuer:GetNewEquippedItemInHand(prefab)
@@ -626,7 +556,7 @@ function ActionQueuer:DeployActiveItem(pos, item)
       DebugPrint("AQ:DeployActiveItem - couldn't find (more) items to dpeloy - ", item.prefab)
       return false
     end
-    local inventoryitem = isDST() and active_item.replica.inventoryitem or active_item.components.deployable
+    local inventoryitem = active_item.components.deployable
     if inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) then
         local act = BufferedAction(self.inst, nil, ACTIONS.DEPLOY, active_item, pos)
         local playercontroller = self.inst.components.playercontroller
@@ -635,11 +565,6 @@ function ActionQueuer:DeployActiveItem(pos, item)
         end
         DebugPrint("AQ:DeployActiveItem - SendActionAndWait, pos: ", pos)
         self:SendActionAndWait(act, true)
-        -- if _isDST and not playercontroller.ismastersim and not CompareDeploySpacing(active_item, DEPLOYSPACING.NONE) then
-        --     while inventoryitem and inventoryitem:CanDeploy(pos, nil, self.inst) do
-        --         Sleep(self.action_delay)
-        --     end
-        -- end
     end
     DebugPrint("AQ:DeployActiveItem - complete, returning true on pos ", pos)
     return true
@@ -657,17 +582,9 @@ function ActionQueuer:DropActiveItem(pos, item)
 end
 
 function ActionQueuer:TerraformAtPoint(pos, item)
-    local arbiterfn
-    if _isDST then
-      arbiterfn = function(pos)
-        local x, y, z = pos:Get()
-        return TheWorld.Map:CanTerraformAtPoint(pos:Get())
-      end
-    else
-      arbiterfn = function(pos)
-        local handitem = self:GetEquippedItemInHand()
-        return handitem and handitem.components.terraformer and handitem.components.terraformer:CanTerraformPoint(pos)
-      end
+    local arbiterfn = function(pos)
+      local handitem = self:GetEquippedItemInHand()
+      return handitem and handitem.components.terraformer and handitem.components.terraformer:CanTerraformPoint(pos)
     end
     if not self:GetEquippedItemInHand() then return false end
     if arbiterfn(pos) then
@@ -866,11 +783,7 @@ function ActionQueuer:RepeatRecipe(builder, recipe, skin)
       DebugPrint("Action_thread - start RepeatRecipe")
         self.inst:ClearBufferedAction()
         while self.inst:IsValid() and builder:CanBuild(recipe.name) do
-            if isDST() then
-              builder:MakeRecipeFromMenu(recipe, skin)
-            else
-              builder:MakeRecipe(recipe)
-            end
+            builder:MakeRecipe(recipe)
             Sleep(self.action_delay)
         end
         self:ClearActionThread()

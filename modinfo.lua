@@ -12,15 +12,10 @@ TODO:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_5"
-api_version_dst = 10
+version = "1.046+myxal_6"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
-
-dst_compatible = true
-all_clients_require_mod = false
-client_only_mod = true
 
 api_version = 6
 dont_starve_compatible = true
