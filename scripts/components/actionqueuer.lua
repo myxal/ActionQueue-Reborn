@@ -15,7 +15,7 @@ for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "nowo
     allowed_actions[category] = {}
 end
 local offsets = {}
--- maps prefab names to a table of functions returning true when the player should stop performing each action
+-- maps action names to a table of functions returning true when the player should stop performing action on any particular entity with specific prefab, or any prefab
 local stop_conditions = {
   HACK = {
     tubertree = function(ent)
@@ -35,17 +35,7 @@ local stop_conditions = {
   }
 }
 stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
--- local stop_conditions = {
---   tubertree = {
---     HACK = function(ent)
---       if ent.tubers then
---         return (ent.tubers < 1)
---       else
---         return nil
---       end
---     end
---   }
--- }
+
 for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}) do
     offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
 end
@@ -101,15 +91,15 @@ local function IsSingleGiveAction(target)
 end
 
 --[[allclick]]
-AddActionList("allclick", "CHOP", "MINE", "NET", "HACK", "SHEAR", "STICK")
+AddActionList("allclick", "CHOP", "MINE", "HACK", "SHEAR", "STICK")
 AddAction("allclick", "ATTACK", function(target)
     return target:HasTag("wall")
 end)
 --[[leftclick]]
 AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
   "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL",
-  "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL", "REPAIR_LEAK",
-  "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
+  "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
+  "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
 AddAction("leftclick", "ACTIVATE", function(target)
     return target.prefab == "dirtpile"
 end)
@@ -130,19 +120,16 @@ AddAction("leftclick", "PICKUP", function(target)
 end)
 --[[rightclick]]
 AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
-"FEEDPLAYER", "HAMMER", "REPAIR", "RESETMINE", "TURNON", "TURNOFF", "UNWRAP")
+"FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF", "UNWRAP")
 --[[single]]
 AddActionList("single", "CASTSPELL", "DECORATEVASE", "SHAVE")
 AddAction("single", "GIVE", IsSingleGiveAction)
 --[[noworkdelay]]
 AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP", "COOK",
   "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER", "HARVEST", "HEAL",
-  "MINE", "PLANT", "REPAIR", "SHEAR", "STICK", "TERRAFORM", "UPGRADE")
+  "MINE", "NET", "PLANT", "REPAIR", "SHEAR", "STICK", "TERRAFORM", "UPGRADE")
 AddAction("noworkdelay", "GIVE", function(target)
     return not IsSingleGiveAction(target)
-end)
-AddAction("noworkdelay", "NET", function(target)
-    return not ThePlayer.components.locomotor or not target:HasTag("butterfly")
 end)
 --[[tools]]
 AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
@@ -533,10 +520,6 @@ function ActionQueuer:GetNewItem(prefab, fn_name, use_item)
             end
         end
     end
-    -- else
-    --
-    -- end
-
 end
 
 function ActionQueuer:GetNewActiveItem(prefab)
