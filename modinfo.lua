@@ -12,7 +12,7 @@ TODO:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_6"
+version = "1.046+myxal_7"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"

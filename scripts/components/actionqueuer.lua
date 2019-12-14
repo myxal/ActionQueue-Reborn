@@ -15,6 +15,10 @@ for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "nowo
   allowed_actions[category] = {}
 end
 local offsets = {}
+local dont_pick = {
+  flower_evil = true,
+  flower = true
+}
 -- maps action names to a table of functions returning true when the player should stop performing action on any particular entity with specific prefab, or any prefab
 local stop_conditions = {
   HACK = {
@@ -97,7 +101,7 @@ local function AddAction(category, action, testfn)
   end)
   --[[leftclick]]
   AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
-  "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL",
+  "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL", "FISH",
   "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
   "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
   AddAction("leftclick", "ACTIVATE", function(target)
@@ -120,14 +124,16 @@ local function AddAction(category, action, testfn)
   end)
   --[[rightclick]]
   AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
-  "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF", "UNWRAP")
+    "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF",
+    "UNWRAP")
   --[[single]]
   AddActionList("single", "CASTSPELL", "DECORATEVASE", "SHAVE")
   AddAction("single", "GIVE", IsSingleGiveAction)
   --[[noworkdelay]]
-  AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP", "COOK",
-  "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER", "HARVEST", "HEAL",
-  "MINE", "NET", "PLANT", "REPAIR", "SHEAR", "STICK", "TERRAFORM", "UPGRADE")
+  AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
+    "COOK", "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER",
+    "HARVEST", "HEAL", "MINE", "NET", "PLANT", "REPAIR", "SHEAR", "STICK",
+    "TERRAFORM", "UPGRADE")
   AddAction("noworkdelay", "GIVE", function(target)
     return not IsSingleGiveAction(target)
   end)
@@ -135,8 +141,8 @@ local function AddAction(category, action, testfn)
   AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
   "SHEAR")
   --[[autocollect]]
-  AddActionList("autocollect", "CHOP", "DIG", "HACK", "HAMMER", "HARVEST", "MINE", "PICK",
-  "PICKUP", "RESETMINE", "SHEAR")
+  AddActionList("autocollect", "CHOP", "DIG", "FISH", "HACK", "HAMMER",
+    "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
   AddAction("autocollect", "GIVE", function(target)
     return not IsSingleGiveAction(target)
   end)
@@ -796,6 +802,7 @@ function ActionQueuer:StartAutoFisher(target)
           end
           Sleep(self.action_delay)
         end
+        if not (pond and pond:IsValid()) then break end
         local catch_act = BufferedAction(self.inst, pond, ACTIONS.REEL, fishingrod, pos)
         self:SendAction(catch_act, false, pond)
         Sleep(self.action_delay)

@@ -159,13 +159,27 @@ AddComponentPostInit("playercontroller", function(self, inst)
   ThePlayer = _G.GetPlayer()
   TheWorld = _G.GetWorld()
   ActionQueuerInit()
-  local can_fish_fn = function(inst, target)
+  local should_autofish_fn = function(inst, target)
     local handitem = inst.components.inventory:GetEquippedItem(_G.EQUIPSLOTS.HANDS)
     if not (handitem ~= nil and handitem.prefab == "fishingrod") then return false end
-    return
-    target and (target:HasTag("fishable") or (target.components.fishable))
-    and target.active ~= false -- this is used by shoals
-    -- and hasfishingrod  -- already true
+    if not (target
+      and (target:HasTag("fishable")
+        or (target.components.fishable))
+      and target.active ~= false) -- this is used by shoals
+    then return false
+    end
+    -- this is the condition from FISH.strfn to use "retrieve" - don't use autofisher on things like flotsam, watery graves, etc.
+    if target and (target.components.workable or target.components.sinkable) then
+      return false
+    end
+    for _, act in ipairs(self.inst.components.playeractionpicker:GetLeftClickActions(target:GetPosition(), target)) do
+
+      if act
+          and act.action.id == "FISH" then
+        return true
+      end
+    end
+    return false
   end
   local PlayerControllerOnControl = self.OnControl
   self.OnControl = function(self, control, down)
@@ -175,7 +189,7 @@ AddComponentPostInit("playercontroller", function(self, inst)
       if down then
         if TheInput:IsAqModifierDown(action_queue_key) then
           local target = TheInput:GetWorldEntityUnderMouse()
-          if can_fish_fn(inst, target) then
+          if should_autofish_fn(inst, target) then
             DebugPrint("PC-OnControl - starting autofisher")
             ActionQueuer:StartAutoFisher(target)
           elseif not ActionQueuer.auto_fishing then
