@@ -1,12 +1,11 @@
 
 --[[
 TODO:
-- highlight adopted from ActionQueue SW - doesn't use configured colour
 - Implement autobuyer
 - Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
-- AutoFisher can be started when the target is not reachable
-- Retrieve (fishingrod on watery grave) doesn't seem to work right
 - try to use boat inventory for tool re-equip
+BUG:
+- highlight doesn't use configured colour
 ]]
 
 name = "ActionQueue Reborn"
