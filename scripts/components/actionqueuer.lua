@@ -116,7 +116,8 @@ local function AddAction(category, action, testfn)
   --     return target == ThePlayer or not target:HasTag("player")
   -- end)
   AddAction("leftclick", "PICK", function(target)
-    return target.prefab ~= "flower_evil"
+    -- return target.prefab ~= "flower_evil"
+    return not dont_pick[target.prefab]
   end)
   AddAction("leftclick", "PICKUP", function(target)
     return target.prefab ~= "trap" and target.prefab ~= "birdtrap"
