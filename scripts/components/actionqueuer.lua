@@ -15,9 +15,12 @@ for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "nowo
   allowed_actions[category] = {}
 end
 local offsets = {}
+-- TODO: Consider adding config options on this
 local dont_pick = {
+  flower = false,
   flower_evil = true,
-  flower = true
+  flower_rainforest = false,
+  cave_fern = false
 }
 -- maps action names to a table of functions returning true when the player should stop performing action on any particular entity with specific prefab, or any prefab
 local stop_conditions = {
@@ -116,7 +119,6 @@ local function AddAction(category, action, testfn)
   --     return target == ThePlayer or not target:HasTag("player")
   -- end)
   AddAction("leftclick", "PICK", function(target)
-    -- return target.prefab ~= "flower_evil"
     return not dont_pick[target.prefab]
   end)
   AddAction("leftclick", "PICKUP", function(target)
@@ -150,7 +152,7 @@ local function AddAction(category, action, testfn)
   --[[collect]]
   AddActionList("collect", "HARVEST", "PICKUP")
   AddAction("collect", "PICK", function(target)
-    return not target:HasTag("flower")
+    return not dont_pick[target.prefab]
   end)
 
   local ActionQueuer = Class(function(self, inst)
