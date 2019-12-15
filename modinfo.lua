@@ -11,7 +11,7 @@ BUG:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_7"
+version = "1.046+myxal_8"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"

@@ -202,7 +202,6 @@ AddComponentPostInit("playercontroller", function(self, inst)
       end
     end
     PlayerControllerOnControl(self, control, down)
-    -- DebugPrint("PCOnControl; control: ", control, ", down: ", down, ", inGame: ", InGame(), ", ActionThread: ", ActionQueuer.action_thread ~= nil, ", SelectionThread: ", ActionQueuer.selection_thread ~= nil)
     local screen = _G.TheFrontEnd:GetActiveScreen()
     if down and ActionQueuer.action_thread and not ActionQueuer.selection_thread and InGame()
     and (interrupt_controls[control] or mouse_control ~= nil and not TheInput:GetHUDEntityUnderMouse()) then
@@ -214,8 +213,7 @@ AddComponentPostInit("playercontroller", function(self, inst)
       end
     end
   end
-  -- This doesn't work in DS, but I don't see why I should care. Inspection interrupts the actionqueue correctly
-  -- local PlayerControllerIsControlPressed = self.IsControlPressed
+  -- eXiGe says this was needed for AQ not to be interrupted by Alt-Tab. Can't exactly check that on Mac, can I... Hitting Alt doesn't break the current thread, so I guess it's OK.
   -- self.IsControlPressed = function(self, control)
   --     if control == CONTROL_FORCE_INSPECT and ActionQueuer.action_thread then return false end
   --     -- return _isDST and PlayerControllerIsControlPressed(self, control) or TheInput:IsControlPressed(control)
@@ -276,37 +274,3 @@ AddComponentPostInit("playercontroller", function(self, inst)
   end
 end
 )
-AddComponentPostInit("inventory", function(self, inst)
-  -- local oldfn = self.TakeActiveItemFromAllOfSlot
-  self.TakeActiveItemFromAllOfSlot = function(self, slot)
-    local item = self:GetItemInSlot(slot)
-    if item ~= nil and
-    self:GetActiveItem() == nil then
-
-      self:RemoveItemBySlot(slot)
-      self:GiveActiveItem(item)
-    end
-  end
-end)
-
-AddComponentPostInit("container", function(self, inst)
-  -- local oldfn = self.TakeActiveItemFromAllOfSlot
-  self.GetItems = function(self)
-    if self.inst.components.container then return self.inst.components.container.slots end
-  end
-  self.QueryActiveItem = function(self)
-    local inventory = self.opener ~= nil and self.opener.components.inventory or nil
-    return inventory, inventory ~= nil and inventory:GetActiveItem() or nil
-  end
-  self.TakeActiveItemFromAllOfSlot = function(self, slot)
-    local inventory, active_item = self:QueryActiveItem()
-    local item = self:GetItemInSlot(slot)
-    if item ~= nil and
-    active_item == nil and
-    inventory ~= nil then
-
-      self:RemoveItemBySlot(slot)
-      inventory:GiveActiveItem(item)
-    end
-  end
-end)

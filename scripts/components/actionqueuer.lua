@@ -15,9 +15,12 @@ for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "nowo
   allowed_actions[category] = {}
 end
 local offsets = {}
+-- TODO: Consider adding config options on this
 local dont_pick = {
+  flower = false,
   flower_evil = true,
-  flower = true
+  flower_rainforest = false,
+  cave_fern = false
 }
 -- maps action names to a table of functions returning true when the player should stop performing action on any particular entity with specific prefab, or any prefab
 local stop_conditions = {
@@ -116,7 +119,6 @@ local function AddAction(category, action, testfn)
   --     return target == ThePlayer or not target:HasTag("player")
   -- end)
   AddAction("leftclick", "PICK", function(target)
-    -- return target.prefab ~= "flower_evil"
     return not dont_pick[target.prefab]
   end)
   AddAction("leftclick", "PICKUP", function(target)
@@ -150,7 +152,7 @@ local function AddAction(category, action, testfn)
   --[[collect]]
   AddActionList("collect", "HARVEST", "PICKUP")
   AddAction("collect", "PICK", function(target)
-    return not target:HasTag("flower")
+    return not dont_pick[target.prefab]
   end)
 
   local ActionQueuer = Class(function(self, inst)
@@ -504,39 +506,41 @@ function ActionQueuer:GetEquippedItemInHand()
   return self.inst.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
 end
 
-function ActionQueuer:GetNewItem(prefab, fn_name, use_item)
-  DebugPrint("GetNewItem, prefab: ", prefab, ", fn_name: ", fn_name, ", use_item: ", use_item)
+function ActionQueuer:GetNewItem(prefab, where_to)
+  -- where_to - one of ACTIVE, EQUIP
+  DebugPrint("GetNewItem, prefab: ", prefab, ", where_to: ", where_to)
   local inventory = self.inst.components.inventory
   local body_item = inventory:GetEquippedItem(EQUIPSLOTS.BODY)
   local backpack = body_item and body_item.components.container
-  for _, inventory in pairs(backpack and {inventory, backpack} or {inventory}) do
-    DebugPrint("Checking inventory: ", inventory.inst)
-    local items
-    if (inventory.type == nil) then
-      DebugPrint("Getting items from main inventory")
-      items = inventory.itemslots
-    else
-      items = inventory:GetItems()
-    end
-    for slot, item in pairs(items) do
-      DebugPrint("Checking item: ", item)
-      if item and item.prefab == prefab then
-        DebugPrint("Item found in inventory: ", inventory.inst)
-        inventory[fn_name](inventory, use_item and item or slot)
-        return item
-      end
-    end
+  -- DebugPrint("GetNewItem, checking inventory: ", inventory.inst)
+  local item = inventory:FindItem(function(check_item, inv)
+    return check_item
+      and check_item.prefab == prefab
+      and check_item:IsValid()
+  end)
+  DebugPrint("GetNewItem - found item:", item)
+  if item == nil then return item end
+  -- DebugPrint("GetNewItem - item owner:", item.components.inventoryitem.owner)
+  if where_to == "ACTIVE" then
+    item = self.inst.components.inventory:RemoveItem(item,true)
+    self.inst.components.inventory:GiveActiveItem(item)
+  elseif where_to == "EQUIP" then
+    self.inst.components.inventory:Equip(item)
   end
+  return item
+  -- for _, inventory in pairs(backpack and {inventory, backpack} or {inventory}) do
+  -- -- moved out of the loop, Inventory:FindItem checks overflow inventory as well (it's not available in DST)
+  -- end
 end
 
 function ActionQueuer:GetNewActiveItem(prefab)
   DebugPrint("Entered AQ:GetNewActiveItem with prefab: ", prefab)
-  return self:GetNewItem(prefab, "TakeActiveItemFromAllOfSlot")
+  return self:GetNewItem(prefab, "ACTIVE")
 end
 
 function ActionQueuer:GetNewEquippedItemInHand(prefab)
   DebugPrint("Entered AQ:GetNewEquippedItemInHand with prefab: ", prefab)
-  return self:GetNewItem(prefab, "UseItemFromInvTile", true)
+  return self:GetNewItem(prefab, "EQUIP")
 end
 
 function ActionQueuer:DeployActiveItem(pos, item)
@@ -572,15 +576,20 @@ function ActionQueuer:DropActiveItem(pos, item)
 end
 
 function ActionQueuer:TerraformAtPoint(pos, item)
-  local arbiterfn = function(pos)
-    local handitem = self:GetEquippedItemInHand()
-    return handitem and handitem.components.terraformer and handitem.components.terraformer:CanTerraformPoint(pos)
+  local arbiterfn = function(item, pos)
+    DebugPrint("arbiterfn, item:", item)
+    return item and item.components.terraformer and item.components.terraformer:CanTerraformPoint(pos)
   end
-  if not self:GetEquippedItemInHand() then return false end
-  if arbiterfn(pos) then
-    local act = BufferedAction(self.inst, nil, ACTIONS.TERRAFORM, item, pos)
+  local handitem = self:GetEquippedItemInHand()
+  if not (handitem and handitem:IsValid()) then
+    self:WaitToolReEquip()
+    handitem = self:GetEquippedItemInHand()
+  end
+  if not handitem then return false end
+  if arbiterfn(handitem, pos) then
+    local act = BufferedAction(self.inst, nil, ACTIONS.TERRAFORM, handitem, pos)
     self:SendActionAndWait(act, true)
-    while arbiterfn(pos) do
+    while arbiterfn(handitem, pos) do
       Sleep(self.action_delay)
     end
     if self.auto_collect then
@@ -650,9 +659,11 @@ function ActionQueuer:ApplyToSelection()
           while IsValidEntity(target) do
             local act = self:GetAction(target, rightclick, pos)
             if not act then
+              DebugPrint("Apply2Selection - action lost; act-item:", active_item, "get-act-item:", self:GetActiveItem())
               if active_item then
                 if noworkdelay then Sleep(self.action_delay) end --queue can exit without this delay
-                if not self:GetActiveItem() and self:GetNewActiveItem(active_item.prefab) then
+                if not (self:GetActiveItem() and self:GetActiveItem():IsValid()) and self:GetNewActiveItem(active_item.prefab) then
+                  DebugPrint("Apply2Selection - got new activeitem")
                   act = self:GetAction(target, rightclick, pos)
                 end
               elseif tool_action and self:WaitToolReEquip() then
