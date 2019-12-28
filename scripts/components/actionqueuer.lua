@@ -39,6 +39,11 @@ local stop_conditions = {
       ent.components.fueled.accepting and
       (ent.components.fueled.currentfuel / ent.components.fueled.maxfuel) >= 0.95
     end
+  },
+  WEIGHDOWN = {
+    pig_ruins_pressure_plate = function(ent)
+      return ent.down
+    end
   }
 }
 stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
@@ -100,15 +105,18 @@ local function AddAction(category, action, testfn)
   --[[allclick]]
   AddActionList("allclick", "CHOP", "MINE", "HACK", "SHEAR", "STICK")
   AddAction("allclick", "ATTACK", function(target)
-    return target:HasTag("wall")
+    return target:HasTag("wall") or target.prefab == "pig_ruins_spear_trap"
   end)
   --[[leftclick]]
   AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
   "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL", "FISH",
   "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
-  "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE")
+  "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
   AddAction("leftclick", "ACTIVATE", function(target)
     return target.prefab == "dirtpile"
+  end)
+  AddAction("leftclick", "DISARM", function(target)
+    return target.prefab ~= "pig_ruins_pressure_plate"
   end)
   AddAction("leftclick", "HARVEST", function(target)
     return target.prefab ~= "birdcage"
@@ -133,7 +141,7 @@ local function AddAction(category, action, testfn)
     "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF",
     "UNWRAP")
   --[[single]]
-  AddActionList("single", "CASTSPELL", "DECORATEVASE", "SHAVE")
+  AddActionList("single", "CASTSPELL", "DECORATEVASE", "DISARM", "SHAVE", "WEIGHDOWN")
   AddAction("single", "GIVE", IsSingleGiveAction)
   --[[noworkdelay]]
   AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
@@ -146,9 +154,15 @@ local function AddAction(category, action, testfn)
   --[[tools]]
   AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
   "SHEAR")
+  --[[Should this be defined by function checking the player's worker component?
+  Seems to work fine without doing so, and the WaitToolReEquip delay is already
+  doing that.
+  ]]--
+  -- AddAction("tools", "HAMMER", function( target) return not (GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER))
   --[[autocollect]]
   AddActionList("autocollect", "CHOP", "DIG", "FISH", "HACK", "HAMMER",
     "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
+  -- Would be nice to add SHAVE and DISARM to autocollect, but picking is not available through Get..ClickAction while there's an active item
   AddAction("autocollect", "GIVE", function(target)
     return not IsSingleGiveAction(target)
   end)
@@ -303,10 +317,12 @@ function ActionQueuer:GetAction(target, rightclick, pos)
   local playeractionpicker = self.inst.components.playeractionpicker
   if rightclick then
     local rcactions = playeractionpicker:GetRightClickActions(target, pos)
-    for _, act in ipairs(rcactions) do
-      if CheckAllowedActions("rightclick", act.action, target) then
-        DebugPrint("Allowed rightclick action:", act)
-        return act, true
+    if (rcactions) then
+      for _, act in ipairs(rcactions) do
+        if CheckAllowedActions("rightclick", act.action, target) then
+          DebugPrint("Allowed rightclick action:", act)
+          return act, true
+        end
       end
     end
   end
@@ -607,7 +623,8 @@ function ActionQueuer:GetClosestTarget()
 end
 
 function ActionQueuer:WaitToolReEquip()
-  if not self:GetEquippedItemInHand() and not self.inst:HasTag("wereplayer") then
+  -- Worker component is added to were-forms of Wilba and Woodie to allow tool-free work. Both are currently unable to even hold any tool, so by definition we don't need to wait. However, if someone comes with a character that uses worker component for some actions and tools for others, this WILL be insufficient, and proper filter functions in the tools actionlist will be required.
+  if not self:GetEquippedItemInHand() and self.inst.components.worker == nil then
     self:Wait()
     return true
   end
