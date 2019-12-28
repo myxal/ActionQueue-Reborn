@@ -113,6 +113,9 @@ local function AddAction(category, action, testfn)
   AddAction("leftclick", "HARVEST", function(target)
     return target.prefab ~= "birdcage"
   end)
+  AddAction("leftclick", "HAMMER", function(target)
+    return GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER)
+  end)
   -- No limit on who we're allowed to heal
   -- AddAction("leftclick", "HEAL", function(target)
   --     --ThePlayer can only heal themselves, not other players
@@ -307,11 +310,14 @@ function ActionQueuer:GetAction(target, rightclick, pos)
       end
     end
   end
-  for _, act in ipairs(playeractionpicker:GetLeftClickActions(pos, target)) do
-    if not rightclick and CheckAllowedActions("leftclick", act.action, target)
-    or CheckAllowedActions("allclick", act.action, target) then
-      DebugPrint("Allowed leftclick action:", act)
-      return act, false
+  local lcactions = playeractionpicker:GetLeftClickActions(pos, target)
+  if (lcactions) then
+    for _, act in ipairs(lcactions) do
+      if not rightclick and CheckAllowedActions("leftclick", act.action, target)
+      or CheckAllowedActions("allclick", act.action, target) then
+        DebugPrint("Allowed leftclick action:", act)
+        return act, false
+      end
     end
   end
   DebugPrint("No allowed action for:", target)
@@ -386,7 +392,6 @@ function ActionQueuer:SelectionBox(rightclick)
     previous_ents = current_ents
   end
   self.selection_thread = StartThread(function()
-    DebugPrint("Selection_thread - start SelectionBox")
     while self.inst:IsValid() do
       if self.queued_movement then
         self.update_selection()
@@ -426,10 +431,8 @@ function ActionQueuer:CherryPick(rightclick)
 end
 
 function ActionQueuer:OnDown(rightclick)
-  DebugPrint("AQ-OnDown: ", rightclick)
   self:ClearSelectionThread()
   if self.inst:IsValid() and not IsHUDEntity() then
-    DebugPrint("Setting clicked = true")
     self.clicked = true
     self:SelectionBox(rightclick)
     self:CherryPick(rightclick)
@@ -437,13 +440,11 @@ function ActionQueuer:OnDown(rightclick)
 end
 
 function ActionQueuer:OnUp(rightclick)
-  DebugPrint("AQ:OnUp - rightclick: ", rightclick)
   self:ClearSelectionThread()
   if self.clicked then
     self.clicked = false
     if self.action_thread then return end
     if self:IsWalkButtonDown() then
-      DebugPrint("AQ:OnUp - clearing entities")
       self:ClearSelectedEntities()
     elseif next(self.selected_ents) then
       self:ApplyToSelection()
@@ -461,7 +462,6 @@ function ActionQueuer:OnUp(rightclick)
         end
         local _isdeployable = active_item.components.inventoryitem:IsDeployable(self.inst)
         if _isdeployable then
-          DebugPrint("AQ:OnUp - issuing DeployToSelection with DeployActiveItem")
           self:DeployToSelection(self.DeployActiveItem, GetDeploySpacing(active_item), active_item)
         else
           self:DeployToSelection(self.DropActiveItem, GetDropSpacing(active_item), active_item)
@@ -508,7 +508,6 @@ end
 
 function ActionQueuer:GetNewItem(prefab, where_to)
   -- where_to - one of ACTIVE, EQUIP
-  DebugPrint("GetNewItem, prefab: ", prefab, ", where_to: ", where_to)
   local inventory = self.inst.components.inventory
   local body_item = inventory:GetEquippedItem(EQUIPSLOTS.BODY)
   local backpack = body_item and body_item.components.container
@@ -518,9 +517,7 @@ function ActionQueuer:GetNewItem(prefab, where_to)
       and check_item.prefab == prefab
       and check_item:IsValid()
   end)
-  DebugPrint("GetNewItem - found item:", item)
   if item == nil then return item end
-  -- DebugPrint("GetNewItem - item owner:", item.components.inventoryitem.owner)
   if where_to == "ACTIVE" then
     item = self.inst.components.inventory:RemoveItem(item,true)
     self.inst.components.inventory:GiveActiveItem(item)
@@ -534,20 +531,16 @@ function ActionQueuer:GetNewItem(prefab, where_to)
 end
 
 function ActionQueuer:GetNewActiveItem(prefab)
-  DebugPrint("Entered AQ:GetNewActiveItem with prefab: ", prefab)
   return self:GetNewItem(prefab, "ACTIVE")
 end
 
 function ActionQueuer:GetNewEquippedItemInHand(prefab)
-  DebugPrint("Entered AQ:GetNewEquippedItemInHand with prefab: ", prefab)
   return self:GetNewItem(prefab, "EQUIP")
 end
 
 function ActionQueuer:DeployActiveItem(pos, item)
-  DebugPrint("AQ:DeployActiveItem - Trying to deploy ", item, " at ", pos)
   local active_item = self:GetActiveItem() or self:GetNewActiveItem(item.prefab)
   if not active_item then
-    DebugPrint("AQ:DeployActiveItem - couldn't find (more) items to dpeloy - ", item.prefab)
     return false
   end
   local inventoryitem = active_item.components.deployable
@@ -557,10 +550,8 @@ function ActionQueuer:DeployActiveItem(pos, item)
     if playercontroller.deployplacer then
       act.rotation = playercontroller.deployplacer.Transform:GetRotation()
     end
-    DebugPrint("AQ:DeployActiveItem - SendActionAndWait, pos: ", pos)
     self:SendActionAndWait(act, true)
   end
-  DebugPrint("AQ:DeployActiveItem - complete, returning true on pos ", pos)
   return true
 end
 
@@ -577,7 +568,6 @@ end
 
 function ActionQueuer:TerraformAtPoint(pos, item)
   local arbiterfn = function(item, pos)
-    DebugPrint("arbiterfn, item:", item)
     return item and item.components.terraformer and item.components.terraformer:CanTerraformPoint(pos)
   end
   local handitem = self:GetEquippedItemInHand()
@@ -640,7 +630,6 @@ end
 
 function ActionQueuer:ApplyToSelection()
   self.action_thread = StartThread(function()
-    DebugPrint("Action_thread - start Apply2Selection")
     self.inst:ClearBufferedAction()
     local active_item = self:GetActiveItem()
     while self.inst:IsValid() do
@@ -659,11 +648,9 @@ function ActionQueuer:ApplyToSelection()
           while IsValidEntity(target) do
             local act = self:GetAction(target, rightclick, pos)
             if not act then
-              DebugPrint("Apply2Selection - action lost; act-item:", active_item, "get-act-item:", self:GetActiveItem())
               if active_item then
                 if noworkdelay then Sleep(self.action_delay) end --queue can exit without this delay
                 if not (self:GetActiveItem() and self:GetActiveItem():IsValid()) and self:GetNewActiveItem(active_item.prefab) then
-                  DebugPrint("Apply2Selection - got new activeitem")
                   act = self:GetAction(target, rightclick, pos)
                 end
               elseif tool_action and self:WaitToolReEquip() then
@@ -687,7 +674,6 @@ function ActionQueuer:ApplyToSelection()
           self:AutoCollect(pos, false)
         end
       else
-        DebugPrint("No act or invalid")
         self:DeselectEntity(target)
       end
     end
@@ -701,7 +687,6 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
   local diagonal = heading % 2 ~= 0
   DebugPrint("Heading:", heading, "Diagonal:", diagonal, "Spacing:", spacing)
   DebugPrint("TL:", self.TL, "TR:", self.TR, "BL:", self.BL, "BR:", self.BR)
-  DebugPrint("DeployToSelection - deploy_fn: ", deploy_fn)
   local X, Z = "x", "z"
   if dir then X, Z = Z, X end
   local spacing_x = self.TL[X] > self.TR[X] and -spacing or spacing
@@ -726,10 +711,7 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
   local row_swap = 1
   self.action_thread = StartThread(function()
     self.inst:ClearBufferedAction()
-    DebugPrint("Action_thread - start dep2sel")
-    DebugPrint("Action Thread in AQ: ",self.action_thread)
     while self.inst:IsValid() do
-      DebugPrint("Action_thread - while loop")
       cur_pos.x = start_x + spacing_x * count.x
       cur_pos.z = start_z + spacing_z * count.z
       if diagonal then
@@ -766,14 +748,10 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
       if terraforming then
         accessible_pos = GetAccessibleTilePosition(cur_pos)
       end
-      DebugPrint("DeployToSelection - accessible_pos: ", accessible_pos)
       if accessible_pos then
-        DebugPrint("DeployToSelection - running deploy_fn ")
         if not deploy_fn(self, accessible_pos, item) then DebugPrint("deploy_fn returned false") break end
       end
-      DebugPrint("DeployToSelection - am I still valid?", self.inst:IsValid())
     end
-    DebugPrint("DeployToSelection Action Thread - while loop terminated")
     self:ClearActionThread()
     self.inst:DoTaskInTime(0, function() if next(self.selected_ents) then self:ApplyToSelection() end end)
   end, action_thread_id)
@@ -781,7 +759,6 @@ end
 
 function ActionQueuer:RepeatRecipe(builder, recipe, skin)
   self.action_thread = StartThread(function()
-    DebugPrint("Action_thread - start RepeatRecipe")
     self.inst:ClearBufferedAction()
     while self.inst:IsValid() and builder:CanBuild(recipe.name) do
       builder:MakeRecipe(recipe)
@@ -826,7 +803,6 @@ function ActionQueuer:StartAutoFisher(target)
         end
         if fish then
           local pickup_act = BufferedAction(self.inst, fish, ACTIONS.PICKUP, nil, fish:GetPosition())
-          DebugPrint("AutoFisher sending PICKUP on fish: ", fish)
           self:SendActionAndWait(pickup_act, false, fish)
         end
       end
@@ -843,7 +819,6 @@ end
 
 function ActionQueuer:SelectEntity(ent, rightclick)
   if self:IsSelectedEntity(ent) then return end
-  DebugPrint("AQ:SelectEntity - ",ent, rightclick)
   self.selected_ents[ent] = rightclick
   local highlight = ent.components.highlight
   if not highlight then
@@ -861,12 +836,9 @@ function ActionQueuer:SelectEntity(ent, rightclick)
 end
 
 function ActionQueuer:DeselectEntity(ent)
-  DebugPrint("Deselecting Entity: ", ent)
   if self:IsSelectedEntity(ent) then
-    DebugPrint("Deselect - removing from internal list:")
     self.selected_ents[ent] = nil
     if ent:IsValid() and ent.components.highlight then
-      DebugPrint("Deselect - removing highlight: ",tostring(ent))
       ent.components.highlight:UnHighlight()
     end
   end
@@ -908,7 +880,6 @@ function ActionQueuer:ClearActionThread()
 end
 
 function ActionQueuer:ClearAllThreads()
-  DebugPrint("ClearAllThreads entered")
   self:ClearActionThread()
   self:ClearSelectionThread()
   self:ClearSelectedEntities()
