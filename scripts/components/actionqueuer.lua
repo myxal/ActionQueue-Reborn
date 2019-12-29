@@ -138,17 +138,15 @@ local function AddAction(category, action, testfn)
   AddAction("leftclick", "HAMMER", function(target)
     return GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER)
   end)
-  -- No limit on who we're allowed to heal
-  -- AddAction("leftclick", "HEAL", function(target)
-  --     --ThePlayer can only heal themselves, not other players
-  --     return target == ThePlayer or not target:HasTag("player")
-  -- end)
   AddAction("leftclick", "PICK", function(target)
     return not dont_pick[target.prefab]
   end)
   AddAction("leftclick", "PICKUP", function(target)
+    local mine = target.components.mine
+    if mine then
+      return not (mine.issprung or not mine.inactive)
+    end
     return target.prefab ~= "trap" and target.prefab ~= "birdtrap"
-    and not target:HasTag("mineactive") and not target:HasTag("minesprung")
   end)
   --[[rightclick]]
   AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
