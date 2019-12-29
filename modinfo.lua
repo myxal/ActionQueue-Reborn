@@ -4,6 +4,9 @@ TODO:
 - Implement autobuyer
 - Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
 - try to use boat inventory for tool re-equip
+- Wilba and Woodie should try all actions on a particular entity (Chop tree, then dig stump, before going to the next tree)
+- Auto-disarming will probably require a more substantial rework on action filter functions. The problem - There are multiple different prefabs for the striking carvings, so double-clicking one of them doesn't work. Highlighting the whole room with a selection box also doesn't work, as the hidden action "weighdown pressure plate with disarming tools" will take over, and I can't currently filter that out.
+- AutoCollect should be able to work with active item - this will require getting the action via action button, and picking how many ction we should do according to what were doing -> shaving beefalo do 3 actions, disarming a trap do 1 action, etc.
 BUG:
 - highlight doesn't use configured colour
 ]]
@@ -11,7 +14,7 @@ BUG:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_8"
+version = "1.046+myxal_10"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
@@ -23,10 +26,11 @@ shipwrecked_compatible = true
 hamlet_compatible = true
 forumthread = ''
 
-folder_name = folder_name or "action queue"
-if not folder_name:find("workshop-") then
-  name = name.."-dev"
-end
+-- This, sadly, doesn't work in DSA
+-- folder_name = folder_name or "action queue"
+-- if not folder_name:find("workshop-") then
+--   name = name.."-dev"
+-- end
 
 local boolean = {{description = "Yes", data = true}, {description = "No", data = false}}
 local string = ""

@@ -213,12 +213,6 @@ AddComponentPostInit("playercontroller", function(self, inst)
       end
     end
   end
-  -- eXiGe says this was needed for AQ not to be interrupted by Alt-Tab. Can't exactly check that on Mac, can I... Hitting Alt doesn't break the current thread, so I guess it's OK.
-  -- self.IsControlPressed = function(self, control)
-  --     if control == CONTROL_FORCE_INSPECT and ActionQueuer.action_thread then return false end
-  --     -- return _isDST and PlayerControllerIsControlPressed(self, control) or TheInput:IsControlPressed(control)
-  --     return TheInput:IsControlPressed(control)
-  -- end
 end)
 
 AddClassPostConstruct("components/builder", function(self)
@@ -258,7 +252,13 @@ AddComponentPostInit("placer", function(self, inst)
 end)
 
 AddComponentPostInit("playeractionpicker", function(self, inst)
-  self.GetLeftClickActions = function(self,a,b) return self:GetClickActions(b,a) end
+  self.GetLeftClickActions = function(self,a,b)
+    if TheInput:IsControlPressed(CONTROL_FORCE_INSPECT) and ActionQueuer and ActionQueuer.action_thread then
+      return self:GetRightClickActions(b,a)
+    else
+      return self:GetClickActions(b,a)
+    end
+  end
 end
 )
 AddComponentPostInit("playercontroller", function(self, inst)
