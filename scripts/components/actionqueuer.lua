@@ -44,6 +44,20 @@ local stop_conditions = {
     pig_ruins_pressure_plate = function(ent)
       return ent.down
     end
+  },
+  GIVE = {
+    AQ_ANY = function(ent)
+      local trader = ent.components.trader
+      if not trader then return false end
+      -- Hoo boy, is this ugly... will rework stop_conditions if there are any more tests requiring access to the player's internals. Not necessarily turn it into a method, maybe I can pass the entire action into the argument.
+      local AQ = GetPlayer().components.actionqueuer
+      local item = AQ:GetActiveItem()
+      if item then
+        return not (trader:CanAccept(item, AQ.inst))
+      else
+        return false
+      end
+    end
   }
 }
 stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
