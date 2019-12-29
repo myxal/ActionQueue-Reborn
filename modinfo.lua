@@ -14,7 +14,7 @@ BUG:
 name = "ActionQueue Reborn"
 description = ""
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
-version = "1.046+myxal_9"
+version = "1.046+myxal_10"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
@@ -26,10 +26,11 @@ shipwrecked_compatible = true
 hamlet_compatible = true
 forumthread = ''
 
-folder_name = folder_name or "action queue"
-if not folder_name:find("workshop-") then
-  name = name.."-dev"
-end
+-- This, sadly, doesn't work in DSA
+-- folder_name = folder_name or "action queue"
+-- if not folder_name:find("workshop-") then
+--   name = name.."-dev"
+-- end
 
 local boolean = {{description = "Yes", data = true}, {description = "No", data = false}}
 local string = ""

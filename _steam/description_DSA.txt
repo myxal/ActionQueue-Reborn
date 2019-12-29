@@ -1,5 +1,5 @@
 [h1]Work-in-progress quality warning[/h1]
-This mod is currently in alpha. Features may not work right, crashes may occur, etc.
+This mod is currently in beta. Features may not work right. I play/test mostly in SW and Hamlet-compatible SW, other versions may have crash-inducing bugs. Please report these issues, after reading instructions in the bug report thread, linked below.
 
 
 [h1][b][u]ActionQueue Reborn for Don't Starve[/u][/b][/h1]
@@ -11,16 +11,25 @@ Where applicable, the original mod's features should work in singleplayer in the
 [list]
 [*]Hacking
 [*]Shearing
+[*]Fishing-rod retrieving
+[*]Disarming (only traps)
+[*]Weighing down
 [/list]
 
 [b]New features[/b]
+Stop conditions filter:
 [list]
-[*]Entity filter: Avoid trying to shave already hairless beefalo, harvest beebox with no honey, or hacking down tuber trees beyond regrowth.
+[*] Stop hacking tubertrees beyond regrowth
+[*] Stop fuelling fires that are already full
+[*] Stop giving item to pig trader that will refuse it
 [/list]
 
 [b]Planned features[/b]
 [list]
-[*] AutoBuyer - Keep buying from pedestals that always restock the same item (10- and 100-piece oincs, ice)
+[*]Autobuyer - automatically buy items that are restocked with identical item every time (ice, oincs, contracts...)
+[*]Mimics - when autoselecting with double-click, don't help player distinguish between different prefabs using the same anim (i.e. winebush and snakeden).
+[*]Entity morph - from eXiGe's AQR, handle entities that exchanged in-place when worked mined/hammered - spilagmite, ancient altar, etc.
+[*] Search boat inventory to re-equip tools (mining coral) or active items (planting seaweed plants).
 [/list]
 
 [h1]Contributing, reporting issues[/h1]
@@ -29,15 +38,15 @@ Pull requests, patches are welcome at [url=https://github.com/myxal/ActionQueue-
 You may also leave a comment in the appropriate discussion thread here: [url=https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690813776/][u]CONTRIBUTIONS[/u][/url]
 
 [b]The mod isn't working right.[/b]
-First, head over to the bug report thread and read the first post. (TL;DR: Simple issues are fine to report here or there, otherwise follow the attached debugging howto)
+First, head over to the bug report thread and read the first post with known issues. (TL;DR: Check known issues first, otherwise follow the attached howto)
 
 [url=https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690807574/][u]BUG REPORTS[/u][/url]
 
 [h1]Known issues[/h1]
-[b]BUGS:[/b]
-[list]
-[*] Too many to list
-[/list]
+
+See above.
+
+
 
 [h1]Original Description[/h1]
 
