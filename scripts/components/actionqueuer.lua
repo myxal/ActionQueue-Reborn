@@ -62,6 +62,15 @@ local stop_conditions = {
 }
 stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
 
+local transform_events = {
+  -- Woodie
+  "transform_werebeaver",
+  "transform_person",
+  -- Wilba
+  "transform_to_werewilba",
+  "transform_to_wilba",
+}
+
 for i, offset in pairs({{0,0},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}) do
   offsets[i] = Point(offset[1] * 1.5, 0, offset[2] * 1.5)
 end
@@ -183,6 +192,9 @@ local function AddAction(category, action, testfn)
   AddAction("collect", "PICK", function(target)
     return not dont_pick[target.prefab]
   end)
+  AddAction("collect", "DIG", function(target)
+    return target:HasTag("stump")
+  end)
 
   local ActionQueuer = Class(function(self, inst)
     self.inst = inst
@@ -211,6 +223,9 @@ local function AddAction(category, action, testfn)
     self.RemoveAction = AddAction
     self.AddActionList = AddActionList
     self.RemoveActionList = RemoveActionList
+    for _,v in pairs (transform_events) do
+      self.inst:ListenForEvent(v, function () self:ClearAllThreads() end)
+    end
   end)
 
   local function IsValidEntity(ent)
