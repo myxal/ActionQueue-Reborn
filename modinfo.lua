@@ -4,15 +4,14 @@ TODO:
 - Implement autobuyer
 - Mimics - it's possible to use AQR to distinguish snakeden from vinebush - yay or nay?
 - try to use boat inventory for tool re-equip
-- Wilba and Woodie should try all actions on a particular entity (Chop tree, then dig stump, before going to the next tree)
 - Auto-disarming will probably require a more substantial rework on action filter functions. The problem - There are multiple different prefabs for the striking carvings, so double-clicking one of them doesn't work. Highlighting the whole room with a selection box also doesn't work, as the hidden action "weighdown pressure plate with disarming tools" will take over, and I can't currently filter that out.
-- AutoCollect should be able to work with active item - this will require getting the action via action button, and picking how many ction we should do according to what were doing -> shaving beefalo do 3 actions, disarming a trap do 1 action, etc.
+- AutoCollect should be able to work with active item - this will require getting the action via action button, and picking how many actions we should do according to what were doing -> shaving beefalo do 3 actions, disarming a trap do 1 action, etc.
 BUG:
-- highlight doesn't use configured colour
+- See thread: https://steamcommunity.com/workshop/filedetails/discussion/1930794331/1754646083690807574/
 ]]
 
 name = "ActionQueue Reborn"
-version = "1.046+myxal_10"
+version = "1.046+myxal_11"
 description = "version: "..version
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
 
