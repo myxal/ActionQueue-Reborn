@@ -12,9 +12,9 @@ BUG:
 ]]
 
 name = "ActionQueue Reborn"
-description = ""
-author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
 version = "1.046+myxal_10"
+description = "version: "..version
+author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
