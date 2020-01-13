@@ -193,7 +193,7 @@ local function AddAction(category, action, testfn)
     return not dont_pick[target.prefab]
   end)
   AddAction("collect", "DIG", function(target)
-    return target:HasTag("stump")
+    return target:HasTag("stump") and not (target.components.hackable)
   end)
 
   local ActionQueuer = Class(function(self, inst)
