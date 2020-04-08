@@ -122,233 +122,233 @@ local function AddAction(category, action, testfn)
   DebugPrint("Successfully", modifier, action_.id, "action in", category, "category.")
 end
 
-  local function AddActionList(category, ...)
-    for _, action in pairs({...}) do
-      AddAction(category, action, true)
+local function AddActionList(category, ...)
+  for _, action in pairs({...}) do
+    AddAction(category, action, true)
+  end
+end
+
+local function RemoveActionList(category, ...)
+  for _, action in pairs({...}) do
+    AddAction(category, action)
+  end
+end
+
+--[[global console functions]]
+AddActionQueuerAction = AddAction
+RemoveActionQueuerAction = AddAction
+AddActionQueuerActionList = AddActionList
+RemoveActionQueuerActionList = RemoveActionList
+
+local function IsSingleGiveAction(target)
+  return target.prefab == "mushroom_farm" or target.prefab == "moonbase" or target:HasTag("gemsocket")
+end
+
+--[[allclick]]
+AddActionList("allclick", "CHOP", "MINE", "HACK", "SHEAR", "STICK")
+AddAction("allclick", "ATTACK", function(target)
+  return target:HasTag("wall") or target.prefab == "pig_ruins_spear_trap"
+end)
+--[[leftclick]]
+AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
+"COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL", "FISH",
+"GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
+"REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
+AddAction("leftclick", "ACTIVATE", function(target)
+  return target.prefab == "dirtpile"
+end)
+AddAction("leftclick", "DISARM", function(target)
+  return target.prefab ~= "pig_ruins_pressure_plate"
+end)
+AddAction("leftclick", "HARVEST", function(target)
+  return target.prefab ~= "birdcage"
+end)
+AddAction("leftclick", "HAMMER", function(target)
+  return GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER)
+end)
+AddAction("leftclick", "PICK", function(target)
+  return not dont_pick[target.prefab]
+end)
+AddAction("leftclick", "PICKUP", function(target)
+  local mine = target.components.mine
+  if mine then
+    return not (mine.issprung or not mine.inactive)
+  end
+  return target.prefab ~= "trap" and target.prefab ~= "birdtrap"
+end)
+--[[rightclick]]
+AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
+  "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF",
+  "UNWRAP")
+--[[single]]
+AddActionList("single", "CASTSPELL", "DECORATEVASE", "DISARM", "SHAVE", "WEIGHDOWN")
+AddAction("single", "GIVE", IsSingleGiveAction)
+--[[noworkdelay]]
+AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
+  "COOK", "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER",
+  "HARVEST", "HEAL", "MINE", "NET", "PICKUP", "PLANT", "REPAIR", "SHEAR",
+  "STICK", "TERRAFORM", "UPGRADE")
+AddAction("noworkdelay", "GIVE", function(target)
+  return not IsSingleGiveAction(target)
+end)
+--[[tools]]
+AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
+"SHEAR")
+--[[Should this be defined by function checking the player's worker component?
+Seems to work fine without doing so, and the WaitToolReEquip delay is already
+doing that.
+]]--
+-- AddAction("tools", "HAMMER", function( target) return not (GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER))
+--[[autocollect]]
+AddActionList("autocollect", "CHOP", "DIG", "FISH", "HACK", "HAMMER",
+  "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
+-- Would be nice to add SHAVE and DISARM to autocollect, but picking is not available through Get..ClickAction while there's an active item
+AddAction("autocollect", "GIVE", function(target)
+  return not IsSingleGiveAction(target)
+end)
+--[[collect]]
+AddActionList("collect", "HARVEST", "PICKUP")
+AddAction("collect", "PICK", function(target)
+  return not dont_pick[target.prefab]
+end)
+AddAction("collect", "DIG", function(target)
+  return target:HasTag("stump") and not (target.components.hackable)
+end)
+
+local ActionQueuer = Class(function(self, inst)
+  self.inst = inst
+  self.selection_widget = Image("images/selection_square.xml", "selection_square.tex")
+  self.selection_widget:Hide()
+  self.clicked = false
+  self.TL, self.TR, self.BL, self.BR = nil, nil, nil, nil
+  TheInput:AddMoveHandler(function(x, y)
+    self.screen_x, self.screen_y = x, y
+    self.queued_movement = true
+  end)
+  --Maps ent to key and rightclick(true or false) to value
+  self.selected_ents = {}
+  self.selection_thread = nil
+  self.action_thread = nil
+  self.action_delay = FRAMES * 3
+  self.work_delay = FRAMES * 6
+  self.color = {x = 1, y = 1, z = 1}
+  self.deploy_on_grid = false
+  self.auto_collect = false
+  self.endless_deploy = false
+  self.last_click = {time = 0}
+  self.double_click_speed = 0.4
+  self.double_click_range = 15
+  self.AddAction = AddAction
+  self.RemoveAction = AddAction
+  self.AddActionList = AddActionList
+  self.RemoveActionList = RemoveActionList
+  for _,v in pairs (transform_events) do
+    self.inst:ListenForEvent(v, function () self:ClearAllThreads() end)
+  end
+end)
+
+local function IsValidEntity(ent)
+  return ent and ent.Transform and ent:IsValid() and not ent:HasTag("INLIMBO")
+end
+
+local function ShouldSkipEntity(ent,action)
+  --[[ Returns true if the work loop should be interrupted regardless of other
+  conditions. For example, tubertrees will not be hacked beyond having 0 tubers.
+  Is also used to filter entities when making selection.
+  ]]
+  local act_id = action.action and action.action.id or action
+  if stop_conditions[act_id] ~= nil then
+    if stop_conditions[act_id][ent.prefab] then
+      return stop_conditions[act_id][ent.prefab](ent)
+    elseif stop_conditions[act_id].AQ_ANY then
+      return stop_conditions[act_id].AQ_ANY(ent)
     end
   end
+  return false
+end
 
-  local function RemoveActionList(category, ...)
-    for _, action in pairs({...}) do
-      AddAction(category, action)
+local function IsHUDEntity()
+  local ent = TheInput:GetWorldEntityUnderMouse()
+  return ent and ent:HasTag("INLIMBO") or TheInput:GetHUDEntityUnderMouse()
+end
+
+local function CheckAllowedActions(category, action, target)
+  local allowed_action = allowed_actions[category][action]
+  return allowed_action and (allowed_action == true or allowed_action(target))
+end
+
+local function GetWorldPosition(screen_x, screen_y)
+  return Point(TheSim:ProjectScreenPos(screen_x, screen_y))
+end
+
+local function GetDeploySpacing(item)
+  for key, spacing in pairs(deploy_spacing) do
+    if item.prefab:find(key) or item:HasTag(key) then return spacing end
+  end
+  local spacing = item.components.deployable.min_spacing
+  return spacing ~= 0 and spacing or 1
+end
+
+local function GetDropSpacing(item)
+  for key, spacing in pairs(drop_spacing) do
+    if item.prefab:find(key) or item:HasTag(key) then return spacing end
+  end
+  return 1
+end
+
+local function CompareDeploySpacing(item, spacing)
+  if item == nil then return end
+  local comps
+  return item and (item.components.deployable) and item.components.deployable.min_spacing == spacing
+end
+
+
+local function GetHeadingDir()
+  local camHeading = (TheCamera.heading) % 360
+  local dir = headings[camHeading]
+  if dir ~= nil then return camHeading, dir end
+  for heading, dir in pairs(headings) do --diagonal priority
+    local check_angle = heading % 2 ~= 0 and 23 or 22.5
+    if math.abs(camHeading - heading) < check_angle then
+      DebugPrint("Heading: ", heading, "; Direction: ", dir)
+      return heading, dir
     end
   end
+end
 
-  --[[global console functions]]
-  AddActionQueuerAction = AddAction
-  RemoveActionQueuerAction = AddAction
-  AddActionQueuerActionList = AddActionList
-  RemoveActionQueuerActionList = RemoveActionList
-
-  local function IsSingleGiveAction(target)
-    return target.prefab == "mushroom_farm" or target.prefab == "moonbase" or target:HasTag("gemsocket")
-  end
-
-  --[[allclick]]
-  AddActionList("allclick", "CHOP", "MINE", "HACK", "SHEAR", "STICK")
-  AddAction("allclick", "ATTACK", function(target)
-    return target:HasTag("wall") or target.prefab == "pig_ruins_spear_trap"
-  end)
-  --[[leftclick]]
-  AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
-  "COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL", "FISH",
-  "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
-  "REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
-  AddAction("leftclick", "ACTIVATE", function(target)
-    return target.prefab == "dirtpile"
-  end)
-  AddAction("leftclick", "DISARM", function(target)
-    return target.prefab ~= "pig_ruins_pressure_plate"
-  end)
-  AddAction("leftclick", "HARVEST", function(target)
-    return target.prefab ~= "birdcage"
-  end)
-  AddAction("leftclick", "HAMMER", function(target)
-    return GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER)
-  end)
-  AddAction("leftclick", "PICK", function(target)
-    return not dont_pick[target.prefab]
-  end)
-  AddAction("leftclick", "PICKUP", function(target)
-    local mine = target.components.mine
-    if mine then
-      return not (mine.issprung or not mine.inactive)
-    end
-    return target.prefab ~= "trap" and target.prefab ~= "birdtrap"
-  end)
-  --[[rightclick]]
-  AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
-    "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF",
-    "UNWRAP")
-  --[[single]]
-  AddActionList("single", "CASTSPELL", "DECORATEVASE", "DISARM", "SHAVE", "WEIGHDOWN")
-  AddAction("single", "GIVE", IsSingleGiveAction)
-  --[[noworkdelay]]
-  AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
-    "COOK", "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER",
-    "HARVEST", "HEAL", "MINE", "NET", "PICKUP", "PLANT", "REPAIR", "SHEAR",
-    "STICK", "TERRAFORM", "UPGRADE")
-  AddAction("noworkdelay", "GIVE", function(target)
-    return not IsSingleGiveAction(target)
-  end)
-  --[[tools]]
-  AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
-  "SHEAR")
-  --[[Should this be defined by function checking the player's worker component?
-  Seems to work fine without doing so, and the WaitToolReEquip delay is already
-  doing that.
-  ]]--
-  -- AddAction("tools", "HAMMER", function( target) return not (GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER))
-  --[[autocollect]]
-  AddActionList("autocollect", "CHOP", "DIG", "FISH", "HACK", "HAMMER",
-    "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
-  -- Would be nice to add SHAVE and DISARM to autocollect, but picking is not available through Get..ClickAction while there's an active item
-  AddAction("autocollect", "GIVE", function(target)
-    return not IsSingleGiveAction(target)
-  end)
-  --[[collect]]
-  AddActionList("collect", "HARVEST", "PICKUP")
-  AddAction("collect", "PICK", function(target)
-    return not dont_pick[target.prefab]
-  end)
-  AddAction("collect", "DIG", function(target)
-    return target:HasTag("stump") and not (target.components.hackable)
-  end)
-
-  local ActionQueuer = Class(function(self, inst)
-    self.inst = inst
-    self.selection_widget = Image("images/selection_square.xml", "selection_square.tex")
-    self.selection_widget:Hide()
-    self.clicked = false
-    self.TL, self.TR, self.BL, self.BR = nil, nil, nil, nil
-    TheInput:AddMoveHandler(function(x, y)
-      self.screen_x, self.screen_y = x, y
-      self.queued_movement = true
-    end)
-    --Maps ent to key and rightclick(true or false) to value
-    self.selected_ents = {}
-    self.selection_thread = nil
-    self.action_thread = nil
-    self.action_delay = FRAMES * 3
-    self.work_delay = FRAMES * 6
-    self.color = {x = 1, y = 1, z = 1}
-    self.deploy_on_grid = false
-    self.auto_collect = false
-    self.endless_deploy = false
-    self.last_click = {time = 0}
-    self.double_click_speed = 0.4
-    self.double_click_range = 15
-    self.AddAction = AddAction
-    self.RemoveAction = AddAction
-    self.AddActionList = AddActionList
-    self.RemoveActionList = RemoveActionList
-    for _,v in pairs (transform_events) do
-      self.inst:ListenForEvent(v, function () self:ClearAllThreads() end)
-    end
-  end)
-
-  local function IsValidEntity(ent)
-    return ent and ent.Transform and ent:IsValid() and not ent:HasTag("INLIMBO")
-  end
-
-  local function ShouldSkipEntity(ent,action)
-    --[[ Returns true if the work loop should be interrupted regardless of other
-    conditions. For example, tubertrees will not be hacked beyond having 0 tubers.
-    Is also used to filter entities when making selection.
-    ]]
-    local act_id = action.action and action.action.id or action
-    if stop_conditions[act_id] ~= nil then
-      if stop_conditions[act_id][ent.prefab] then
-        return stop_conditions[act_id][ent.prefab](ent)
-      elseif stop_conditions[act_id].AQ_ANY then
-        return stop_conditions[act_id].AQ_ANY(ent)
+local function GetAccessibleTilePosition(pos)
+  local ent_blockers = TheSim:FindEntities(pos.x, 0, pos.z, 4, {"blocker"})
+  for _, offset in pairs(offsets) do
+    local offset_pos = offset + pos
+    for _, ent in pairs(ent_blockers) do
+      local ent_radius = ent:GetPhysicsRadius(0) + 0.6 --character size + 0.1
+      if offset_pos:DistSq(ent:GetPosition()) < ent_radius * ent_radius then
+        offset_pos = nil
+        break
       end
     end
-    return false
+    if offset_pos then return offset_pos end
   end
+  return nil
+end
 
-  local function IsHUDEntity()
-    local ent = TheInput:GetWorldEntityUnderMouse()
-    return ent and ent:HasTag("INLIMBO") or TheInput:GetHUDEntityUnderMouse()
-  end
+function ActionQueuer:SetToothTrapSpacing(num)
+  deploy_spacing.trap = num
+end
 
-  local function CheckAllowedActions(category, action, target)
-    local allowed_action = allowed_actions[category][action]
-    return allowed_action and (allowed_action == true or allowed_action(target))
-  end
-
-  local function GetWorldPosition(screen_x, screen_y)
-    return Point(TheSim:ProjectScreenPos(screen_x, screen_y))
-  end
-
-  local function GetDeploySpacing(item)
-    for key, spacing in pairs(deploy_spacing) do
-      if item.prefab:find(key) or item:HasTag(key) then return spacing end
-    end
-    local spacing = item.components.deployable.min_spacing
-    return spacing ~= 0 and spacing or 1
-  end
-
-  local function GetDropSpacing(item)
-    for key, spacing in pairs(drop_spacing) do
-      if item.prefab:find(key) or item:HasTag(key) then return spacing end
-    end
-    return 1
-  end
-
-  local function CompareDeploySpacing(item, spacing)
-    if item == nil then return end
-    local comps
-    return item and (item.components.deployable) and item.components.deployable.min_spacing == spacing
-  end
-
-
-  local function GetHeadingDir()
-    local camHeading = (TheCamera.heading) % 360
-    local dir = headings[camHeading]
-    if dir ~= nil then return camHeading, dir end
-    for heading, dir in pairs(headings) do --diagonal priority
-      local check_angle = heading % 2 ~= 0 and 23 or 22.5
-      if math.abs(camHeading - heading) < check_angle then
-        DebugPrint("Heading: ", heading, "; Direction: ", dir)
-        return heading, dir
-      end
-    end
-  end
-
-  local function GetAccessibleTilePosition(pos)
-    local ent_blockers = TheSim:FindEntities(pos.x, 0, pos.z, 4, {"blocker"})
-    for _, offset in pairs(offsets) do
-      local offset_pos = offset + pos
-      for _, ent in pairs(ent_blockers) do
-        local ent_radius = ent:GetPhysicsRadius(0) + 0.6 --character size + 0.1
-        if offset_pos:DistSq(ent:GetPosition()) < ent_radius * ent_radius then
-          offset_pos = nil
-          break
-        end
-      end
-      if offset_pos then return offset_pos end
-    end
-    return nil
-  end
-
-  function ActionQueuer:SetToothTrapSpacing(num)
-    deploy_spacing.trap = num
-  end
-
-  function ActionQueuer:Wait(action, target)
-    local current_time = GetTime()
-    if action and CheckAllowedActions("noworkdelay", action, target) then
-      repeat
-        DebugPrint("Sleeping under noworkdelay...")
-        Sleep(self.action_delay)
-      until not (self.inst.sg and self.inst.sg:HasStateTag("moving")) and not self.inst:HasTag("moving")
-    else
-      Sleep(self.work_delay)
-      repeat
-        -- DebugPrint("Sleeping under workdelay")
-        Sleep(self.action_delay)
-      until not (
+function ActionQueuer:Wait(action, target)
+  local current_time = GetTime()
+  if action and CheckAllowedActions("noworkdelay", action, target) then
+    repeat
+      DebugPrint("Sleeping under noworkdelay...")
+      Sleep(self.action_delay)
+    until not (self.inst.sg and self.inst.sg:HasStateTag("moving")) and not self.inst:HasTag("moving")
+  else
+    Sleep(self.work_delay)
+    repeat
+      -- DebugPrint("Sleeping under workdelay")
+      Sleep(self.action_delay)
+    until not (
       self.inst.sg
       and self.inst.sg:HasStateTag("moving")
     ) and not self.inst:HasTag("moving")
