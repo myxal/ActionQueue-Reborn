@@ -3,6 +3,25 @@ local GeoUtil = require("utils/geoutil")
 local Image = require("widgets/image")
 local headings = {[0] = true, [45] = false, [90] = false, [135] = true, [180] = true, [225] = false, [270] = false, [315] = true, [360] = true}
 local easy_stack = {minisign_item = "structure", minisign_drawn = "structure", spidereggsack = "spiderden"}
+-- Groups of identically-looking entities have the same number, or "group_id"
+local lookalikes = {
+  snakeden = 1,
+  bush_vine = 1,
+
+  -- chessjunk1 = 2,
+  -- chessjunk2 = 2,
+  -- chessjunk3 = 2,
+  --
+  -- ruins_statue_head = 3,
+  -- ruins_statue_head_nogem = 3,
+  --
+  -- ruins_statue_mage = 4,
+  -- ruins_statue_mage_nogem = 4,
+}
+local entity_morph = {
+  spiderhole = "spiderhole_rock",
+  ancient_altar = "ancient_altar_broken"
+}
 local deploy_spacing = {wall = 1, fence = 1, trap = 2, mine = 2, turf = 4, moonbutterfly = 4}
 local drop_spacing = {trap = 2}
 local unselectable_tags = {"DECOR", "FX", "INLIMBO", "NOCLICK", "player"}
@@ -95,13 +114,13 @@ local function AddAction(category, action, testfn)
   end
   if testfn ~= nil and testfn ~= true and type(testfn) ~= "function" then
     DebugPrint("testfn should be true, a function that returns a boolean, or nil:", testfn, "type:", type(testfn))
-      return
-    end
-    local modifier = allowed_actions[category][action_] and (testfn and "modified" or "removed") or (testfn and "added")
-    if not modifier then return end
-    allowed_actions[category][action_] = testfn
-    DebugPrint("Successfully", modifier, action_.id, "action in", category, "category.")
+    return
   end
+  local modifier = allowed_actions[category][action_] and (testfn and "modified" or "removed") or (testfn and "added")
+  if not modifier then return end
+  allowed_actions[category][action_] = testfn
+  DebugPrint("Successfully", modifier, action_.id, "action in", category, "category.")
+end
 
   local function AddActionList(category, ...)
     for _, action in pairs({...}) do
@@ -450,8 +469,20 @@ function ActionQueuer:CherryPick(rightclick)
   local current_time = GetTime()
   if current_time - self.last_click.time < self.double_click_speed and self.last_click.prefab then
     local x, y, z = self.last_click.pos:Get()
+    local last_prefab = self.last_click.prefab
+    local new_prefab
     for _, ent in pairs(TheSim:FindEntities(x, y, z, self.double_click_range, nil, unselectable_tags)) do
-      if ent.prefab == self.last_click.prefab and IsValidEntity(ent) and not self:IsSelectedEntity(ent) then
+      new_prefab = ent.prefab
+      DebugPrint("comparing", last_prefab,"and",new_prefab)
+      DebugPrint(lookalikes[last_prefab], lookalikes[new_prefab])
+      if
+        new_prefab == last_prefab
+        or (
+          lookalikes[last_prefab] ~= nil
+          and lookalikes[new_prefab] == lookalikes[last_prefab]
+        )
+        and IsValidEntity(ent)
+        and not self:IsSelectedEntity(ent) then
         local act, rightclick_ = self:GetAction(ent, rightclick)
         if act and (act.action == self.last_click.action) and not ShouldSkipEntity(ent,act) then
           self:SelectEntity(ent, rightclick_)
@@ -657,6 +688,15 @@ function ActionQueuer:WaitToolReEquip()
   end
 end
 
+function ActionQueuer:CheckEntityMorph(prefab, pos, rightclick)
+    if not entity_morph[prefab] then return end
+    for _, ent in pairs(TheSim:FindEntities(pos.x, 0, pos.z, 1, nil, unselectable_tags)) do
+        if ent.prefab == entity_morph[prefab] then
+            self:SelectEntity(ent, rightclick)
+        end
+    end
+end
+
 function ActionQueuer:AutoCollect(pos, collect_now)
   for _, ent in pairs(TheSim:FindEntities(pos.x, pos.y, pos.z, 4, nil, unselectable_tags)) do
     if IsValidEntity(ent) and not self:IsSelectedEntity(ent) then
@@ -708,6 +748,7 @@ function ActionQueuer:ApplyToSelection()
           end
         end
         self:DeselectEntity(target)
+        self:CheckEntityMorph(target.prefab, pos, rightclick)
         if active_item and not self:GetActiveItem() then
           self:GetNewActiveItem(active_item.prefab)
         elseif tool_action then
