@@ -167,8 +167,8 @@ local function AddAction(category, action, testfn)
   --[[noworkdelay]]
   AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
     "COOK", "DIG", "DRY", "EAT", "FERTILIZE", "FILL", "HACK", "HAMMER",
-    "HARVEST", "HEAL", "MINE", "NET", "PLANT", "REPAIR", "SHEAR", "STICK",
-    "TERRAFORM", "UPGRADE")
+    "HARVEST", "HEAL", "MINE", "NET", "PICKUP", "PLANT", "REPAIR", "SHEAR",
+    "STICK", "TERRAFORM", "UPGRADE")
   AddAction("noworkdelay", "GIVE", function(target)
     return not IsSingleGiveAction(target)
   end)

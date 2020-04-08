@@ -11,7 +11,7 @@ BUG:
 ]]
 
 name = "ActionQueue Reborn"
-version = "1.046+myxal_11"
+version = "1.046+myxal_12"
 description = "version: "..version
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
 
