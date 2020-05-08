@@ -110,7 +110,7 @@ TheInput:AddKeyUpHandler(GetKeyFromConfig("endless_deploy_key"), function()
   ThePlayer.components.talker:Say("Endless deploy: "..tostring(ActionQueuer.endless_deploy))
 end)
 
-local last_recipe, last_skin
+local last_recipe
 TheInput:AddKeyUpHandler(GetKeyFromConfig("last_recipe_key"), function()
   if not InGame() then return end
   if not last_recipe then
@@ -127,7 +127,7 @@ TheInput:AddKeyUpHandler(GetKeyFromConfig("last_recipe_key"), function()
     if not builder:IsBuildBuffered(last_recipe.name) then
       builder:BufferBuild(last_recipe.name)
     end
-    ThePlayer.components.playercontroller:StartBuildPlacementMode(last_recipe, last_skin)
+    ThePlayer.components.playercontroller:StartBuildPlacementMode(last_recipe)
   else
     builder:MakeRecipe(last_recipe)
   end
@@ -222,12 +222,14 @@ AddClassPostConstruct("components/builder", function(self)
     last_recipe = recipe
     if not ActionQueuer.action_thread and TheInput:IsAqModifierDown(action_queue_key)
     and not recipe.placer and self:CanBuild(recipe.name) then
-      ActionQueuer:RepeatRecipe(self, recipe, skin)
+      ActionQueuer:RepeatRecipe(self, recipe)
     else
-      BuilderMakeRecipe(self, recipe, pt, rot, onsuccess, modifydata)
+      local success = BuilderMakeRecipe(self, recipe, pt, rot, onsuccess, modifydata)
+      -- DebugPrint("AQR MakeRecipe; Traceback:")
+      -- DebugPrint(debugstack())
+      return success
     end
   end
-
 end)
 
 Highlight = _G.require("components/highlight")

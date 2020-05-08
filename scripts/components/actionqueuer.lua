@@ -581,19 +581,15 @@ function ActionQueuer:OnUp(rightclick)
       local playercontroller = self.inst.components.playercontroller
       local recipe = playercontroller.placer_recipe
       local rotation = playercontroller.placer:GetRotation()
-      local skin = playercontroller.placer_recipe_skin
       local builder = self.inst.components.builder
       local spacing = recipe.min_spacing > 2 and 4 or 2
       self:DeployToSelection(function(self, pos, item)
-        if not builder:IsBuildBuffered(recipe.name) then
-          if not builder:CanBuild(recipe.name) then return false end
-          builder:BufferBuild(recipe.name)
-        end
-        if builder:CanBuildAtPoint(pos, recipe, rotation) then
-          builder:MakeRecipeAtPoint(recipe, pos, rotation, skin)
-          self:Wait()
-        end
-        return true
+        DebugPrint("Making recipe ", recipe.name, " at ", pos)
+        local success = builder:MakeRecipe(recipe, pos, rotation)
+        DebugPrint("B:MR returned ", success, ", waiting")
+        -- DebugPrint(debugstack())
+        self:Wait()
+        return success
       end, spacing)
     end
   end
@@ -873,7 +869,7 @@ function ActionQueuer:DeployToSelection(deploy_fn, spacing, item)
   end, action_thread_id)
 end
 
-function ActionQueuer:RepeatRecipe(builder, recipe, skin)
+function ActionQueuer:RepeatRecipe(builder, recipe)
   self.action_thread = StartThread(function()
     self.inst:ClearBufferedAction()
     while self.inst:IsValid() and builder:CanBuild(recipe.name) do
