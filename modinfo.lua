@@ -10,7 +10,7 @@ BUG:
 ]]
 
 name = "ActionQueue Reborn"
-version = "1.049+myxal_3"
+version = "1.049+myxal_4"
 description = "version: "..version
 author = "myxal(DSA port) / eXiGe / simplex(Original Author)"
 
@@ -84,5 +84,6 @@ configuration_options = {
   AddConfig("Enable endless deploy by default", "endless_deploy", boolean, false),
   AddConfig("Craft last recipe key","last_recipe_key", keylist, "KEY_C"),
   AddConfig("Tooth-trap spacing", "tooth_trap_spacing", BuildNumConfig(1, 4, 0.5), 2),
+  AddConfig("Extended lookalikes", "extend_lookalikes", boolean, false),
   AddConfig("Enable Debug Mode", "debug_mode", boolean, false),
 }

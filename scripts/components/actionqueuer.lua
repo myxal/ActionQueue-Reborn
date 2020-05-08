@@ -8,16 +8,6 @@ local lookalikes = {
   snakeden = 1,
   bush_vine = 1,
 
-  -- chessjunk1 = 2,
-  -- chessjunk2 = 2,
-  -- chessjunk3 = 2,
-  --
-  -- ruins_statue_head = 3,
-  -- ruins_statue_head_nogem = 3,
-  --
-  -- ruins_statue_mage = 4,
-  -- ruins_statue_mage_nogem = 4,
-
   pig_ruins_pigman_relief_leftside_dart = 5,
   pig_ruins_pigman_relief_leftside_dart_blue = 5,
   pig_ruins_pigman_relief_rightside_dart = 5,
@@ -30,9 +20,23 @@ local lookalikes = {
   pig_ruins_pigman_relief_dart2_blue = 5,
   pig_ruins_pigman_relief_dart3_blue = 5,
   pig_ruins_pigman_relief_dart4_blue = 5,
+}
+local lookalikes_ext = {
+  chessjunk1 = 2,
+  chessjunk2 = 2,
+  chessjunk3 = 2,
+
+  ruins_statue_head = 3,
+  ruins_statue_head_nogem = 3,
+
+  ruins_statue_mage = 4,
+  ruins_statue_mage_nogem = 4,
 
   pig_ruins_pig = 6,
   pig_ruins_ant = 6,
+
+  berrybush = 7,
+  berrybush2 = 7,
 }
 local entity_morph = {
   spiderhole = "spiderhole_rock",
@@ -46,7 +50,7 @@ local action_thread_id = "actionqueue_action_thread"
 local allowed_actions = {}
 local TheWorld
 TheWorld = GetWorld()
-for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "noworkdelay", "tools", "autocollect", "collect"}) do
+for _, category in pairs({"allclick", "leftclick", "rightclick", "single", "noworkdelay", "tools", "autocollect", "collect", "reequip"}) do
   allowed_actions[category] = {}
 end
 local offsets = {}
@@ -211,6 +215,7 @@ end)
 --[[tools]]
 AddActionList("tools", "ATTACK", "CHOP", "DIG", "DISLODGE", "HAMMER", "MINE",
   "NET", "HACK", "SHEAR")
+AddActionList("reequip", "DISLODGE")
 -- Note: new ballpein_hammer is not automatically equipped
 --[[Should this be defined by function checking the player's worker component?
 Seems to work fine without doing so, and the WaitToolReEquip delay is already
@@ -256,6 +261,7 @@ local ActionQueuer = Class(function(self, inst)
   self.last_click = {time = 0}
   self.double_click_speed = 0.4
   self.double_click_range = 15
+  self.extend_lookalikes = false
   self.AddAction = AddAction
   self.RemoveAction = AddAction
   self.AddActionList = AddActionList
@@ -373,7 +379,7 @@ function ActionQueuer:Wait(action, target)
     and self.inst.sg:HasStateTag("idle")
     and not self.inst.components.playercontroller:IsDoingOrWorking()
   end
-  if self.inst.sg and self.inst.sg:HasStateTag("idle") and self.inst.bufferedaction ~= nil then
+  if self.inst.bufferedaction ~= nil and self.inst.sg and self.inst.sg:HasStateTag("idle") then
     DebugPrint("Detected Wolfgang bug, clearing buffered action")
     self.inst:ClearBufferedAction()
   end
@@ -495,13 +501,16 @@ function ActionQueuer:CherryPick(rightclick)
     local new_prefab
     for _, ent in pairs(TheSim:FindEntities(x, y, z, self.double_click_range, nil, unselectable_tags)) do
       new_prefab = ent.prefab
-      DebugPrint("comparing", last_prefab,"and",new_prefab)
-      DebugPrint(lookalikes[last_prefab], lookalikes[new_prefab])
       if
         new_prefab == last_prefab
         or (
           lookalikes[last_prefab] ~= nil
           and lookalikes[new_prefab] == lookalikes[last_prefab]
+        )
+        or (
+          self.extend_lookalikes
+          and lookalikes_ext[last_prefab]
+          and lookalikes_ext[new_prefab] == lookalikes_ext[last_prefab]
         )
         and IsValidEntity(ent)
         and not self:IsSelectedEntity(ent) then

@@ -146,6 +146,7 @@ local function ActionQueuerInit()
   ActionQueuer:SetToothTrapSpacing(GetModConfigData("tooth_trap_spacing"))
   local r, g, b = unpack(PLAYERCOLOURS[GetModConfigData("selection_color")])
   ActionQueuer:SetSelectionColor(r, g, b, GetModConfigData("selection_opacity"))
+  ActionQueuer.extend_lookalikes = GetModConfigData("extend_lookalikes")
 end
 
 local action_queue_key = GetKeyFromConfig("action_queue_key")
