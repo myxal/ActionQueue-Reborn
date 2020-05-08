@@ -18,10 +18,21 @@ local lookalikes = {
   -- ruins_statue_mage = 4,
   -- ruins_statue_mage_nogem = 4,
 
+  pig_ruins_pigman_relief_leftside_dart = 5,
+  pig_ruins_pigman_relief_leftside_dart_blue = 5,
+  pig_ruins_pigman_relief_rightside_dart = 5,
+  pig_ruins_pigman_relief_rightside_dart_blue = 5,
   pig_ruins_pigman_relief_dart1 = 5,
   pig_ruins_pigman_relief_dart2 = 5,
   pig_ruins_pigman_relief_dart3 = 5,
-  pig_ruins_pigman_relief_dart4 = 5
+  pig_ruins_pigman_relief_dart4 = 5,
+  pig_ruins_pigman_relief_dart1_blue = 5,
+  pig_ruins_pigman_relief_dart2_blue = 5,
+  pig_ruins_pigman_relief_dart3_blue = 5,
+  pig_ruins_pigman_relief_dart4_blue = 5,
+
+  pig_ruins_pig = 6,
+  pig_ruins_ant = 6,
 }
 local entity_morph = {
   spiderhole = "spiderhole_rock",
@@ -156,9 +167,9 @@ AddAction("allclick", "ATTACK", function(target)
 end)
 --[[leftclick]]
 AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
-"COOK", "DECORATEVASE", "DIG", "DRAW", "DRY", "EAT", "FERTILIZE", "FILL", "FISH",
-"GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT", "RAISE_SAIL",
-"REPAIR_LEAK", "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
+  "COOK", "DECORATEVASE", "DIG", "DISLODGE", "DRAW", "DRY", "EAT", "FERTILIZE",
+  "FILL", "FISH", "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT",
+  "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
 AddAction("leftclick", "ACTIVATE", function(target)
   return target.prefab == "dirtpile"
 end)
@@ -186,7 +197,8 @@ AddActionList("rightclick", "CASTSPELL", "COOK", "DIG", "DISMANTLE","EAT",
   "FEEDPLAYER", "HAMMER", "NET", "REPAIR", "RESETMINE", "TURNON", "TURNOFF",
   "UNWRAP")
 --[[single]]
-AddActionList("single", "CASTSPELL", "DECORATEVASE", "DISARM", "SHAVE", "WEIGHDOWN")
+AddActionList("single", "CASTSPELL", "DECORATEVASE", "DISARM", "DISLODGE",
+  "SHAVE", "WEIGHDOWN")
 AddAction("single", "GIVE", IsSingleGiveAction)
 --[[noworkdelay]]
 AddActionList("noworkdelay", "ADDFUEL", "ADDWETFUEL", "ATTACK", "CHOP",
@@ -197,16 +209,17 @@ AddAction("noworkdelay", "GIVE", function(target)
   return not IsSingleGiveAction(target)
 end)
 --[[tools]]
-AddActionList("tools", "ATTACK", "CHOP", "DIG", "HAMMER", "MINE", "NET", "HACK",
-"SHEAR")
+AddActionList("tools", "ATTACK", "CHOP", "DIG", "DISLODGE", "HAMMER", "MINE",
+  "NET", "HACK", "SHEAR")
+-- Note: new ballpein_hammer is not automatically equipped
 --[[Should this be defined by function checking the player's worker component?
 Seems to work fine without doing so, and the WaitToolReEquip delay is already
 doing that.
 ]]--
 -- AddAction("tools", "HAMMER", function( target) return not (GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER))
 --[[autocollect]]
-AddActionList("autocollect", "CHOP", "DIG", "FISH", "HACK", "HAMMER",
-  "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
+AddActionList("autocollect", "CHOP", "DIG", "DISLODGE", "FISH", "HACK",
+  "HAMMER", "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
 -- Would be nice to add SHAVE and DISARM to autocollect, but picking is not available through Get..ClickAction while there's an active item
 AddAction("autocollect", "GIVE", function(target)
   return not IsSingleGiveAction(target)
