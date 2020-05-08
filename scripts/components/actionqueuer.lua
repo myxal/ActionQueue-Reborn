@@ -17,6 +17,11 @@ local lookalikes = {
   --
   -- ruins_statue_mage = 4,
   -- ruins_statue_mage_nogem = 4,
+
+  pig_ruins_pigman_relief_dart1 = 5,
+  pig_ruins_pigman_relief_dart2 = 5,
+  pig_ruins_pigman_relief_dart3 = 5,
+  pig_ruins_pigman_relief_dart4 = 5
 }
 local entity_morph = {
   spiderhole = "spiderhole_rock",
