@@ -346,14 +346,18 @@ function ActionQueuer:Wait(action, target)
   else
     Sleep(self.work_delay)
     repeat
-      -- DebugPrint("Sleeping under workdelay")
       Sleep(self.action_delay)
+      -- DebugPrint("Sleeping under workdelay")
     until not (
       self.inst.sg
       and self.inst.sg:HasStateTag("moving")
     ) and not self.inst:HasTag("moving")
     and self.inst.sg:HasStateTag("idle")
     and not self.inst.components.playercontroller:IsDoingOrWorking()
+  end
+  if self.inst.sg and self.inst.sg:HasStateTag("idle") and self.inst.bufferedaction ~= nil then
+    DebugPrint("Detected Wolfgang bug, clearing buffered action")
+    self.inst:ClearBufferedAction()
   end
   DebugPrint("Time waited:", GetTime() - current_time)
 end
