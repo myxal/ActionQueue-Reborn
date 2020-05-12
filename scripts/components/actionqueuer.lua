@@ -59,7 +59,13 @@ local dont_pick = {
   flower = false,
   flower_evil = true,
   flower_rainforest = false,
-  cave_fern = false
+  cave_fern = false,
+}
+local dont_pick_auto = {
+  lantern = true,
+  flower = true,
+  flower_evil = true,
+  cave_fern = true,
 }
 -- maps action names to a table of functions returning true when the player should stop performing action on any particular entity with specific prefab, or any prefab
 local stop_conditions = {
@@ -230,9 +236,12 @@ AddAction("autocollect", "GIVE", function(target)
   return not IsSingleGiveAction(target)
 end)
 --[[collect]]
-AddActionList("collect", "HARVEST", "PICKUP")
+AddActionList("collect", "HARVEST")
+AddAction("collect", "PICKUP", function(target)
+  return not dont_pick_auto[target.prefab]
+end)
 AddAction("collect", "PICK", function(target)
-  return not dont_pick[target.prefab]
+  return not dont_pick_auto[target.prefab]
 end)
 AddAction("collect", "DIG", function(target)
   return target:HasTag("stump") and not (target.components.hackable)
