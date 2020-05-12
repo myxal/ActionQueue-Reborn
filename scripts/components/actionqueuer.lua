@@ -178,7 +178,7 @@ end)
 --[[leftclick]]
 AddActionList("leftclick", "ADDFUEL", "ADDWETFUEL", "CHECKTRAP", "COMBINESTACK",
   "COOK", "DECORATEVASE", "DIG", "DISLODGE", "DRAW", "DRY", "EAT", "FERTILIZE",
-  "FILL", "FISH", "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT",
+  "FILL", "FISH", "FISHOCEAN", "GIVE", "HAUNT", "HEAL", "LOWER_SAIL_BOOST", "PLANT",
   "SEW", "SHAVE", "TAKEITEM", "UPGRADE", "WEIGHDOWN")
 AddAction("leftclick", "ACTIVATE", function(target)
   return target.prefab == "dirtpile"
@@ -229,7 +229,7 @@ doing that.
 ]]--
 -- AddAction("tools", "HAMMER", function( target) return not (GetPlayer().components.worker and GetPlayer().components.worker:CanDoAction(ACTIONS.HAMMER))
 --[[autocollect]]
-AddActionList("autocollect", "CHOP", "DIG", "DISLODGE", "FISH", "HACK",
+AddActionList("autocollect", "CHOP", "DIG", "DISLODGE", "FISH", "FISHOCEAN", "HACK",
   "HAMMER", "HARVEST", "MINE", "PICK", "PICKUP", "RESETMINE", "SHEAR")
 -- Would be nice to add SHAVE and DISARM to autocollect, but picking is not available through Get..ClickAction while there's an active item
 AddAction("autocollect", "GIVE", function(target)
