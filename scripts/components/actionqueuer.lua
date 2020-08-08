@@ -574,8 +574,8 @@ function ActionQueuer:OnUp(rightclick)
             return
           end
         end
-        local _isdeployable = active_item.components.inventoryitem:IsDeployable(self.inst)
-        if _isdeployable then
+        local _isdeployable = active_item.components.inventoryitem.IsDeployable
+        if _isdeployable == true or (type(_isdeployable) == "function" and active_item.components.inventoryitem:IsDeployable(self.inst)) then
           self:DeployToSelection(self.DeployActiveItem, GetDeploySpacing(active_item), active_item)
         else
           self:DeployToSelection(self.DropActiveItem, GetDropSpacing(active_item), active_item)
