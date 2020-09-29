@@ -103,6 +103,15 @@ local stop_conditions = {
         return false
       end
     end
+  },
+  HARVEST = {
+    fish_farm = function(ent)
+      local volume = ent.volume or ent.components.breeder.volume
+      if volume and volume > 1 then
+        return false
+      end
+      return true
+    end
   }
 }
 stop_conditions.ADDWETFUEL = stop_conditions.ADDFUEL
