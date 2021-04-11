@@ -598,7 +598,7 @@ function ActionQueuer:OnUp(rightclick)
     elseif self.inst.components.playercontroller.placer then
       local playercontroller = self.inst.components.playercontroller
       local recipe = playercontroller.placer_recipe
-      local rotation = playercontroller.placer:GetRotation()
+      local rotation = playercontroller.placer.Transform:GetRotation()
       local builder = self.inst.components.builder
       local spacing = recipe.min_spacing > 2 and 4 or 2
       self:DeployToSelection(function(self, pos, item)
